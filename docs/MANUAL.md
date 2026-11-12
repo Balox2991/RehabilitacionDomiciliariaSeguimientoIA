@@ -71,6 +71,8 @@ cd apps/tracking-prototype && node --test tests/*.test.mjs   # motor de ángulos
 cd apps/pose-service && pytest && node --test tests/validate.test.mjs
 ```
 
+Revisión en tamaño de celular (con la demo corriendo): `cd apps/web && npm i --no-save playwright-core && node tools/mobile-check.mjs capturas 390 844`.
+
 ## 7. Copia de seguridad
 
 Todo el estado vive en un archivo: `apps/backend/data/telerehab.db`. Para respaldar, **detén la API** y copia ese archivo. Contiene

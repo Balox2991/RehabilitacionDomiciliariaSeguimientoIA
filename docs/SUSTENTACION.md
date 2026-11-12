@@ -111,9 +111,11 @@ puntos a revisar con asesoría antes de usarlo con pacientes reales (habilitaci�
 fisioterapeuta; no da indicaciones clínicas (cargas, rangos, plazos) que el equipo tratante no haya definido. No reemplaza la
 valoración presencial.
 
-**¿Funciona en celular?** La interfaz tiene estilos para pantallas pequeñas (barra inferior, columnas que se apilan), pero **no la he
-probado en un celular real**: pruébala antes de la defensa si quieres mostrarla así. Para usar la cámara en un celular hace falta HTTPS
-al publicarla (requisito del navegador). Una app nativa o PWA queda como trabajo futuro.
+**¿Funciona en celular?** Revisé las 16 pantallas principales (paciente y fisioterapeuta) en **emulación de celular con Chrome** a 320, 360, 390
+y 768 px de ancho: sin desborde horizontal y con la navegación adaptada (barra inferior para el paciente, pestañas deslizables para el
+fisioterapeuta). Encontré y corregí dos desbordes reales (el informe y la lista de sesiones en pantallas angostas). **No** lo he probado en
+un celular físico ni con la cámara real del teléfono: pruébalo antes de la defensa si lo vas a mostrar así. Para usar la cámara en un celular
+hace falta HTTPS al publicarla (requisito del navegador). Una app nativa o PWA queda como trabajo futuro.
 
 **¿Está en producción?** No. Corre en local con datos ficticios. Para publicarla faltan: HTTPS y dominio, base de datos
 gestionada, correo de invitación y recuperación de contraseña, y revisión jurídica.
@@ -124,8 +126,8 @@ gestionada, correo de invitación y recuperación de contraseña, y revisión ju
 - Solo 4 ejercicios se miden con cámara (rodilla, codo, hombro, elevación de pierna recta); los demás de la biblioteca son guiados.
 - No hay validación en pacientes con fractura (movilidad limitada, yesos, edema) ni con distintos tonos de piel y complexiones.
 - Los videos de demostración de los ejercicios son muñecos animados, no videos reales.
-- La interfaz no se ha probado en un celular real (solo en escritorio).
-- La interfaz no se ha probado en un celular real (solo en escritorio).
+- La interfaz se revisó en emulación de celular, no en un teléfono físico ni con su cámara.
+- La interfaz se revisó en emulación de celular, no en un teléfono físico ni con su cámara.
 - El límite de intentos de ingreso vive en memoria (se reinicia con el servidor) y no hay pantalla para consultar la auditoría.
 
 ## 8. Trabajo futuro

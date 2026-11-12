@@ -61,6 +61,8 @@
 .routine-card { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-sm); color: var(--ink); text-decoration: none !important; transition: border-color 0.14s, box-shadow 0.14s; }
 .routine-card:hover { border-color: var(--blue-600); box-shadow: var(--shadow-md); }
 .routine-card > .icon:last-child { color: var(--ink-3); }
+.routine-card { min-width: 0; }
+.routine-card > :not(.icon) { min-width: 0; overflow-wrap: anywhere; }
 .routine-icon { flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--info-bg); color: var(--blue-600); }
 .routine-body { flex: 1; display: grid; gap: 6px; }
 .routine-body h3 { font-size: 16.5px; }
@@ -176,7 +178,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid var(--cyan-500); 
 
 /* ---------- Informe imprimible ---------- */
 .report-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.report { padding: 36px 40px; display: grid; gap: 26px; }
+.report { padding: 36px 40px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; }
 .report-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 2px solid var(--navy-900); }
 .report-logo { width: 150px; height: auto; }
 .report-title { text-align: right; }
