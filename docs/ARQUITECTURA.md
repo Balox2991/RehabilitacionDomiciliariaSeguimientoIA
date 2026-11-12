@@ -36,6 +36,7 @@ Una petición tiene cuatro partes:
 | Rutas del cliente | react-router-dom 7 | Que `/paciente/5/progreso` sea una pantalla sin recargar la página | `apps/web/src/App.jsx` |
 | Gráficas | Recharts 3 | Evolución del movimiento, barras semanales | `apps/web/src/charts` |
 | **Visión por computador** | MediaPipe Tasks Vision (PoseLandmarker) | Detecta 33 puntos del cuerpo **en el navegador del paciente** | `apps/tracking-prototype/src/poseTracker.js` |
+| Visión por computador (servidor, opcional) | RTMPose + FastAPI + ONNX Runtime | Analiza un video subido con un modelo más pesado; devuelve los 33 puntos. Endpoints `/pose/frame` y `/pose/video` | `apps/pose-service` |
 | Motor de tracking | JavaScript puro | Calcula ángulos, cuenta repeticiones, detecta compensaciones | `apps/tracking-prototype/src` |
 | **API (servidor)** | Node 24 + Express 5 | Recibe peticiones, valida, aplica reglas, responde JSON | `apps/backend/src/app.js` |
 | **Base de datos** | SQLite (`node:sqlite`) con migraciones | Guarda usuarios, planes, sesiones, notas, fotos, evidencia | `apps/backend/data/telerehab.db` |

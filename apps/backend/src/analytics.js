@@ -337,6 +337,8 @@ export function therapistSummary(db, therapistId, now, tz = 0) {
 // ---------------------------------------------------------------------------------------------
 // Informe clínico de un paciente (para imprimir o guardar como PDF desde el navegador).
 
+import { reportNarrative } from "./narrative.js";
+
 export function patientReport(db, patientId, now, tz = 0) {
   const overview = patientOverview(db, patientId, now, tz);
   if (!overview) return null;
@@ -397,7 +399,7 @@ export function patientReport(db, patientId, now, tz = 0) {
   const repsTotal30 = reps30.reduce((n, s) => n + s.reps_completed, 0);
   const compTotal30 = reps30.reduce((n, s) => n + s.compensation_count, 0);
 
-  return {
+  const report = {
     generated_at: now.toISOString(),
     patient: overview.patient,
     first_session_at: sessions[0]?.started_at ?? null,
@@ -413,4 +415,5 @@ export function patientReport(db, patientId, now, tz = 0) {
     routines: overview.routines.assigned,
     notes,
   };
+  return { ...report, narrative: reportNarrative(report) };
 }

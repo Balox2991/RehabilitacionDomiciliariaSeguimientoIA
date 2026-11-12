@@ -48,6 +48,13 @@ export default function ReportTab() {
           <div><dt>Repeticiones con alerta, 30 d</dt><dd className="num">{summary.compensation_rate_30d_pct == null ? "—" : `${summary.compensation_rate_30d_pct}%`}</dd></div>
         </dl>
 
+        {data.narrative?.length > 0 && (
+          <section className="report-narrative">
+            <h3>Resumen</h3>
+            {data.narrative.map((t, i) => <p key={i} className={i === data.narrative.length - 1 ? "card-sub" : undefined}>{t}</p>)}
+          </section>
+        )}
+
         <section>
           <h3>Rango de movimiento por ejercicio</h3>
           {plans.length === 0 ? <p className="card-sub">Sin ejercicios con cámara prescritos.</p> : (

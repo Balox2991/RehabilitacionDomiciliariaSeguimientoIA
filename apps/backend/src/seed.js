@@ -7,7 +7,8 @@
 // Es determinista: el mismo generador pseudoaleatorio siempre produce los mismos pacientes y ROM.
 // Las fechas son relativas a "hoy", así el dashboard siempre se ve reciente.
 
-import { rmSync, existsSync, readFileSync } from "node:fs";
+import { rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { randomInt } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { openDb } from "./db.js";
 import { createApp } from "./app.js";
@@ -127,13 +128,18 @@ for (const [i, p] of PATIENTS.entries()) {
   }
 }
 
-// Cuentas de demostración: todas con la misma contraseña (SOLO para datos ficticios; nunca la uses con pacientes reales).
-// La primera fisioterapeuta es también administradora.
-const demoPassword = process.env.DEMO_PASSWORD ?? "Demo-Telerehab-2026";
+// Cuentas de demostración: todas comparten UNA contraseña, generada al azar en cada siembra (o la que pongas en DEMO_PASSWORD).
+// Así el repositorio no trae ninguna credencial conocida. Se imprime y se guarda en data/demo-credentials.txt (fuera de git).
+// La primera fisioterapeuta es también administradora. Los datos son ficticios: nunca uses esta contraseña con pacientes reales.
+const letters = "abcdefghjkmnpqrstuvwxyz", digits = "23456789";
+const randomPassword = () => Array.from({ length: 8 }, () => letters[randomInt(letters.length)]).join("") + "-" + Array.from({ length: 4 }, () => digits[randomInt(digits.length)]).join("");
+const demoPassword = process.env.DEMO_PASSWORD ?? randomPassword();
 db.prepare("UPDATE users SET password_hash = ?").run(hashPassword(demoPassword));
 db.prepare("UPDATE users SET is_admin = 1 WHERE id = ?").run(therapist.id);
+const credsFile = fileURLToPath(new URL("../data/demo-credentials.txt", import.meta.url));
+writeFileSync(credsFile, `Cuentas de demostración (datos ficticios)\nContraseña de todas: ${demoPassword}\nFisioterapeuta y administradora: camila.restrepo@ejemplo.co\nPacientes: ${PATIENTS.map((p) => p.email).join(", ")}\n`);
 
 server.close();
-console.log(`Contraseña de las cuentas de demostración: ${demoPassword}  (fisioterapeuta y administradora: camila.restrepo@ejemplo.co · pacientes: p. ej. andres.mejia@ejemplo.co)`);
+console.log(`Contraseña de las cuentas de demostración: ${demoPassword}  (fisioterapeuta y administradora: camila.restrepo@ejemplo.co · pacientes: p. ej. andres.mejia@ejemplo.co) · guardada en ${credsFile}`);
 console.log(`Datos de demostración creados en ${dbFile}`);
 console.log(`  1 fisioterapeuta (id ${therapist.id}), ${PATIENTS.length} pacientes, ${sessionsCreated} sesiones`);

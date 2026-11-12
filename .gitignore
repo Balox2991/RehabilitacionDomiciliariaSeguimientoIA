@@ -3,3 +3,4 @@ apps/backend/data/
 *.db
 .env
 dist/
+logs/
