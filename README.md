@@ -4,7 +4,7 @@ Plataforma web para que pacientes en recuperación de una fractura hagan sus eje
 fisioterapeuta siga la evolución de todos ellos desde un panel. El sistema **estima el ángulo articular, cuenta repeticiones y detecta
 compensaciones de postura** con visión por computador, y convierte esos datos en alertas, estadísticas y un informe imprimible.
 
-Proyecto de grado — Ingeniería de Sistemas. Autor: **Juan David Amaya**.
+Proyecto de grado — Ingeniería de Sistemas. Autor: **Juan David Amaya , Nicolas Rodriguez**.
 
 > **Aviso importante.** Esto es un proyecto académico, **no un dispositivo médico**. Las mediciones con cámara son estimaciones con margen
 > de error y no reemplazan el goniómetro ni la valoración del fisioterapeuta. Todos los datos incluidos son **ficticios**: no lo uses con
