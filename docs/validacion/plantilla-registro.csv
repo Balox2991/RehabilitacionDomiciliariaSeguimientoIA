@@ -1,0 +1,5 @@
+participant,exercise,side,hold_id,target_deg,rater1_deg,rater2_deg,model,camera_deg,visible_frac
+# Una fila por sostén Y por modelo (mediapipe y rtmpose). Los grados son FLEXION clinica (0 = extendido).
+# camera_deg y visible_frac los produce tools/holds.mjs. Dejar vacio lo que falte (no escribir 0). Ejemplo:
+P01,knee_flexion,left,k090,90,88,91,mediapipe,87.5,0.98
+P01,knee_flexion,left,k090,90,88,91,rtmpose,89.9,1.00

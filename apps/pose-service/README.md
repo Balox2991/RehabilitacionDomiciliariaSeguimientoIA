@@ -45,3 +45,9 @@ Backend con `POSE_SERVICE_URL=http://localhost:8000` (y `POSE_API_KEY` si la usa
 `pytest` (6 pruebas, sin descargar modelos). Medido en CPU sin GPU, RTMPose-m: ~0,3 s por cuadro → un video de 30 s a
 15 fps tarda ~2,5 min; `lightweight` es más rápido, `cuda` mucho más. **No hay todavía una comparación de precisión contra
 MediaPipe ni contra goniómetro** (Fase 4 del plan): hasta entonces no se puede afirmar que sea «mejor» con números.
+
+## Validación contra goniómetro
+
+Protocolo, hoja de campo y plantilla de datos en `docs/PROTOCOLO-VALIDACION-GONIOMETRO.md` y `docs/validacion/`.
+Herramientas: `tools/extract.py` (puntos con ambos modelos), `tools/holds.mjs` (ángulo de cada sostén),
+`tools/validate.mjs` (Bland-Altman, ICC, error absoluto, comparación entre modelos). Pruebas: `node --test tests/validate.test.mjs`.
