@@ -8,7 +8,7 @@ let server, base, db, therapist, patient, planId;
 
 before(async () => {
   db = openDb(":memory:");
-  server = createApp(db).listen(0);
+  server = createApp(db, { auth: false }).listen(0);
   await new Promise((r) => server.once("listening", r));
   base = `http://localhost:${server.address().port}`;
   therapist = await call("POST", "/users", { role: "therapist", name: "Dra. Ruiz", email: "ruiz@clinica.co" });
@@ -47,7 +47,7 @@ const sessionBody = (trace, over = {}) => ({
 });
 
 test("la migración 4 existe y deja la tabla de análisis", () => {
-  assert.equal(SCHEMA_VERSION, 5);
+  assert.equal(SCHEMA_VERSION, 6);
   assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name = 'session_analysis'").get());
 });
 

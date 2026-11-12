@@ -164,7 +164,7 @@ export function NotesTab() {
     setSaving(true);
     setProblem("");
     try {
-      await api.addNote(pid, Number(tid), text);
+      await api.addNote(pid, text);
       setText("");
       reload();
     } catch (err) {

@@ -3,7 +3,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell.jsx";
 import { Loading } from "./components/PageState.jsx";
 import Login from "./pages/Login.jsx";
-import Enter from "./pages/Enter.jsx";
+import ChangePassword from "./pages/ChangePassword.jsx";
+import { RequireAdmin, RequireAuth } from "./lib/auth.jsx";
 import TherapistLayout from "./pages/therapist/TherapistLayout.jsx";
 import PatientLayout from "./pages/patient/PatientLayout.jsx";
 
@@ -24,6 +25,7 @@ const TherapistLibraryItem = lazyPage(() => import("./pages/therapist/TherapistL
 const TherapistRoutine = lazyPage(() => import("./pages/therapist/TherapistLibrary.jsx"), "TherapistRoutine");
 const Evidence = lazyPage(() => import("./pages/therapist/Evidence.jsx"));
 const PatientDataTab = lazyPage(() => import("./pages/therapist/PatientDataTab.jsx"));
+const Accounts = lazyPage(() => import("./pages/therapist/Accounts.jsx"));
 const Settings = lazyPage(() => import("./pages/therapist/Settings.jsx"));
 
 const Home = lazyPage(() => import("./pages/patient/Home.jsx"));
@@ -42,9 +44,10 @@ export default function App() {
         <Route path="entrar" element={<Navigate to="/" replace />} />
 
         <Route element={<AppShell />}>
-          <Route path="demo" element={<Enter />} />
+          <Route path="demo" element={<Navigate to="/" replace />} />
+          <Route path="cambiar-clave" element={<ChangePassword />} />
 
-          <Route path="fisio/:tid" element={<TherapistLayout />}>
+          <Route path="fisio/:tid" element={<RequireAuth role="therapist"><TherapistLayout /></RequireAuth>}>
             <Route index element={<Overview />} />
             <Route path="pacientes" element={<Patients />} />
             <Route path="paciente/:pid" element={<PatientDetail />}>
@@ -60,9 +63,10 @@ export default function App() {
             <Route path="biblioteca/:code" element={<TherapistLibraryItem />} />
             <Route path="evidencia" element={<Evidence />} />
             <Route path="configuracion" element={<Settings />} />
+            <Route path="cuentas" element={<RequireAdmin><Accounts /></RequireAdmin>} />
           </Route>
 
-          <Route path="paciente/:pid" element={<PatientLayout />}>
+          <Route path="paciente/:pid" element={<RequireAuth role="patient"><PatientLayout /></RequireAuth>}>
             <Route index element={<Home />} />
             <Route path="progreso" element={<Progress />} />
             <Route path="rutinas" element={<Routines />} />
@@ -70,7 +74,7 @@ export default function App() {
             <Route path="aprender" element={<Library />} />
             <Route path="aprender/:code" element={<LibraryItem />} />
           </Route>
-          <Route path="paciente/:pid/ejercicio/:planId" element={<ExerciseFlow />} />
+          <Route path="paciente/:pid/ejercicio/:planId" element={<RequireAuth role="patient"><ExerciseFlow /></RequireAuth>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

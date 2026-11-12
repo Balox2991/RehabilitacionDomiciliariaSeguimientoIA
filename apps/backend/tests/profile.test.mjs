@@ -85,7 +85,7 @@ test("buildProfileUpdate ignora campos que no son de la ficha (no se puede colar
 
 let server, base;
 before(async () => {
-  server = createApp(openDb(":memory:"), { now: () => NOW }).listen(0);
+  server = createApp(openDb(":memory:"), { auth: false, now: () => NOW }).listen(0);
   await new Promise((r) => server.once("listening", r));
   base = `http://localhost:${server.address().port}`;
 });

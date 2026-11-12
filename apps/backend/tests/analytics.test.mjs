@@ -14,7 +14,7 @@ const daysAgo = (n, hour = 10) => {
 
 let server, base;
 before(async () => {
-  server = createApp(openDb(":memory:"), { now: () => NOW }).listen(0);
+  server = createApp(openDb(":memory:"), { auth: false, now: () => NOW }).listen(0);
   await new Promise((r) => server.once("listening", r));
   base = `http://localhost:${server.address().port}`;
 });
@@ -164,7 +164,7 @@ test("overview y summary devuelven 404 para ids que no son del rol correcto", as
 test("zona horaria: 'hoy', la racha y 'última sesión' se cuentan en el día local del usuario, no en UTC", async () => {
   // Ahora = 21 sep 03:37 UTC = domingo 20 sep 22:37 en Colombia (UTC-5).
   const late = new Date("2026-09-21T03:37:00Z");
-  const s2 = createApp(openDb(":memory:"), { now: () => late }).listen(0);
+  const s2 = createApp(openDb(":memory:"), { auth: false, now: () => late }).listen(0);
   await new Promise((r) => s2.once("listening", r));
   const b2 = `http://localhost:${s2.address().port}`;
   const c2 = async (m, p, body) => {

@@ -8,6 +8,9 @@ import { toEmbedUrl } from "./video.js";
 import { ANALYZER_VERSION, analyzeSession } from "./engine.js";
 import { parseTrace } from "./trace.js";
 import { coachingFor } from "./coaching.js";
+import { registerAuth } from "./authRoutes.js";
+import { hashPassword, passwordProblem } from "./auth.js";
+import { MAX_VIDEO_BYTES, POSE_MODES, PoseServiceError, createPoseClient } from "./poseClient.js";
 
 const ROLES = ["patient", "therapist"];
 const SIDES = ["left", "right"];
@@ -48,7 +51,13 @@ function toId(raw) {
 }
 
 // `now` es inyectable para que las estadísticas (ventanas de 7/30 días, rachas) sean deterministas en las pruebas.
-export function createApp(db, { now = () => new Date() } = {}) {
+// `auth: false` existe SOLO para las pruebas de las demás rutas y para el sembrado de datos de demostración; el servidor real
+// (server.js) nunca lo usa. Hay una prueba que comprueba que, con auth activada, ninguna ruta responde sin sesión.
+export function createApp(db, {
+  now = () => new Date(), pose = createPoseClient(), auth = true,
+  secureCookies = process.env.COOKIE_SECURE === "1" || process.env.NODE_ENV === "production",
+  allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "").split(",").filter(Boolean), loginsPerWindow = 20,
+} = {}) {
   const app = express();
   // Los registros de sesión (ángulos + esqueleto) pesan cientos de KB: solo esa ruta admite un cuerpo grande. Todas las
   // demás conservan el límite de fábrica de 100 KB, así una petición enorme no se acepta en cualquier lado.
@@ -93,6 +102,30 @@ export function createApp(db, { now = () => new Date() } = {}) {
   }
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
+  registerAuth(app, { db, now, enforce: auth, HttpError, require_, secure: secureCookies, allowedOrigins, loginsPerWindow });
+  // Con sesión activa, quién ejecuta la acción sale de la SESIÓN, nunca de lo que diga el cuerpo de la petición.
+  const actor = (req, fromBody) => (req.user ? req.user.id : fromBody);
+
+  // --- Servicio de pose (opcional): analiza un VIDEO con un modelo más preciso que el del navegador (RTMPose) ---
+  app.get("/pose/status", async (_req, res) => res.json(await pose.status()));
+
+  // Cuerpo = el archivo de video tal cual (Content-Type: video/*). No guarda nada: devuelve el registro y su análisis, y
+  // el cliente lo guarda con POST /patients/:id/sessions (campo `trace`), que lo vuelve a validar y analizar.
+  app.post("/pose/analyze-video", express.raw({ type: "video/*", limit: MAX_VIDEO_BYTES }), async (req, res) => {
+    const { exercise_code, side, target_angle, mode = "balanced" } = req.query;
+    const exercise = q.exerciseByCode.get(exercise_code);
+    require_(exercise, "exercise_code desconocido (ver GET /exercises)");
+    require_(SIDES.includes(side), "side debe ser 'left' o 'right'");
+    const target = Number(target_angle ?? exercise.default_target_angle);
+    require_(isNum(target) && target > 0 && target <= 180, "target_angle debe estar entre 0 y 180");
+    require_(POSE_MODES.includes(mode), `mode debe ser uno de ${POSE_MODES.join(", ")}`);
+    require_(Buffer.isBuffer(req.body) && req.body.length > 0, "el cuerpo debe ser un video (Content-Type: video/mp4, video/webm…)");
+    const out = await pose.traceFromVideo({ video: req.body, contentType: req.get("content-type"), exerciseCode: exercise.code, side, targetAngle: target, mode });
+    require_(out.seen > 0, "no se detectó a la persona en el video");
+    const trace = { ...out.trace, meta: { ...out.trace.meta, exercise: exercise.code, side, targetAngle: target, restAngle: exercise.rest_angle, direction: exercise.direction } };
+    res.json({ model: out.model, frames_total: out.total, frames_with_person: out.seen, processing_ms: out.processing_ms, trace, analysis: analyzeSession(trace, { expectedReps: null }) });
+  });
+
 
   app.get("/exercises", (_req, res) => {
     res.json(db.prepare("SELECT * FROM exercises ORDER BY id").all().map((e) => ({ ...e, spec: e.spec ? JSON.parse(e.spec) : null })));
@@ -100,8 +133,16 @@ export function createApp(db, { now = () => new Date() } = {}) {
 
   // ---- Usuarios ----------------------------------------------------------
   app.post("/users", (req, res) => {
-    const { role, name, email, therapist_id } = req.body ?? {};
+    const { role, name, email, password } = req.body ?? {};
+    let { therapist_id } = req.body ?? {};
     require_(ROLES.includes(role), "role debe ser 'patient' o 'therapist'");
+    if (req.user && role === "patient" && (!req.user.is_admin || therapist_id == null)) { therapist_id = req.user.id; req.body = { ...req.body, therapist_id }; } // un fisioterapeuta solo crea pacientes SUYOS (también en lo que lee buildProfileUpdate)
+    let passwordHash = null;
+    if (password !== undefined) {
+      const problem = passwordProblem(password, email);
+      require_(!problem, problem);
+      passwordHash = hashPassword(password);
+    }
     require_(typeof name === "string" && name.trim(), "name es obligatorio");
     require_(typeof email === "string" && /^\S+@\S+\.\S+$/.test(email), "email inválido");
 
@@ -121,7 +162,7 @@ export function createApp(db, { now = () => new Date() } = {}) {
       let userId;
       try {
         userId = Number(
-          db.prepare("INSERT INTO users (role, name, email) VALUES (?, ?, ?)").run(role, name.trim(), email.toLowerCase())
+          db.prepare("INSERT INTO users (role, name, email, password_hash, must_change_password) VALUES (?, ?, ?, ?, ?)").run(role, name.trim(), email.toLowerCase(), passwordHash, passwordHash ? 1 : 0)
             .lastInsertRowid
         );
       } catch (err) {
@@ -142,7 +183,8 @@ export function createApp(db, { now = () => new Date() } = {}) {
       }
       return userId;
     });
-    res.status(201).json(q.userById.get(id));
+    const { password_hash: _h, failed_logins: _f, locked_until: _l, ...safe } = q.userById.get(id);
+    res.status(201).json(safe);
   });
 
   // Lista pública de fisioterapeutas: solo para el "modo demostración" del frontend (sin login todavía, Fase 5).
@@ -210,7 +252,8 @@ export function createApp(db, { now = () => new Date() } = {}) {
   app.put("/patients/:id/consent", (req, res) => {
     const id = toId(req.params.id);
     getPatient(id);
-    const { granted, recorded_by } = req.body ?? {};
+    const { granted } = req.body ?? {};
+    const recorded_by = actor(req, req.body?.recorded_by);
     require_(typeof granted === "boolean", "granted debe ser true o false");
     if (granted) {
       const t = q.userById.get(recorded_by);
@@ -256,7 +299,8 @@ export function createApp(db, { now = () => new Date() } = {}) {
   app.post("/patients/:id/plans", (req, res) => {
     const patientId = toId(req.params.id);
     getPatient(patientId);
-    const { exercise_code, side, target_angle, sets, reps_per_set, times_per_week, created_by } = req.body ?? {};
+    const { exercise_code, side, target_angle, sets, reps_per_set, times_per_week } = req.body ?? {};
+    const created_by = actor(req, req.body?.created_by);
     const exercise = q.exerciseByCode.get(exercise_code);
     require_(exercise, "exercise_code desconocido (ver GET /exercises)");
     require_(SIDES.includes(side), "side debe ser 'left' o 'right'");
@@ -506,7 +550,8 @@ export function createApp(db, { now = () => new Date() } = {}) {
   app.post("/patients/:id/routines", (req, res) => {
     const patientId = toId(req.params.id);
     getPatient(patientId);
-    const { routine_code, assigned_by } = req.body ?? {};
+    const { routine_code } = req.body ?? {};
+    const assigned_by = actor(req, req.body?.assigned_by);
     const routine = db.prepare("SELECT id FROM routines WHERE code = ?").get(routine_code);
     require_(routine, "routine_code desconocido (ver GET /routines)");
     if (assigned_by != null) {
@@ -550,7 +595,8 @@ export function createApp(db, { now = () => new Date() } = {}) {
   app.post("/patients/:id/notes", (req, res) => {
     const patientId = toId(req.params.id);
     getPatient(patientId);
-    const { author_id, body } = req.body ?? {};
+    const { body } = req.body ?? {};
+    const author_id = actor(req, req.body?.author_id);
     const text = typeof body === "string" ? body.trim() : "";
     require_(text.length >= 1 && text.length <= 2000, "body debe tener entre 1 y 2000 caracteres");
     const author = q.userById.get(author_id);
@@ -594,9 +640,9 @@ export function createApp(db, { now = () => new Date() } = {}) {
   app.use((_req, _res, next) => next(new HttpError(404, "ruta no encontrada")));
   // eslint-disable-next-line no-unused-vars
   app.use((err, _req, res, _next) => {
-    if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
+    if (err instanceof HttpError || err instanceof PoseServiceError) return res.status(err.status).json({ error: err.message });
     if (err.type === "entity.parse.failed") return res.status(400).json({ error: "JSON inválido" });
-    if (err.type === "entity.too.large") return res.status(413).json({ error: "El contenido enviado es demasiado grande (fotos: máximo 300 KB; registro de una sesión: máximo 3 MB)" });
+    if (err.type === "entity.too.large") return res.status(413).json({ error: "El contenido enviado es demasiado grande (fotos: máximo 300 KB; registro de una sesión: máximo 3 MB; video: máximo 150 MB)" });
     console.error(err);
     res.status(500).json({ error: "error interno" });
   });

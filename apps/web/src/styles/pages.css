@@ -9,6 +9,8 @@ main { flex: 1; }
 .brand-text strong { font-family: var(--font-display); font-weight: 800; font-size: 18px; letter-spacing: -0.01em; }
 .brand-text small { font-family: var(--font-display); font-weight: 600; font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
 .topnav { display: flex; align-items: center; gap: 18px; }
+.topnav-user { color: var(--ink-2); font-size: 14px; font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .topnav-user { display: none; } }
 .topnav a:not(.btn) { color: var(--ink-2); font-weight: 500; font-size: 14.5px; }
 .topnav a.active { color: var(--navy-900); font-weight: 700; }
 .demo-badge { font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warn); background: var(--warn-bg); padding: 5px 10px; border-radius: 999px; }

@@ -18,7 +18,7 @@ function Suggestion({ item, pid, tid, evidence, onApplied }) {
     setState({ status: "working", message: "" });
     try {
       await api.updatePlan(proposal.plan_id, { [proposal.field]: proposal.value });
-      await api.addNote(pid, Number(tid), appliedNote(item, t.label));
+      await api.addNote(pid, appliedNote(item, t.label));
       setState({ status: "applied", message: "Ajuste aplicado y registrado en las notas." });
       onApplied?.();
     } catch (err) {

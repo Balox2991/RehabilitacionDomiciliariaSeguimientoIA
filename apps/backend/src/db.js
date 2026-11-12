@@ -13,6 +13,7 @@ const MIGRATIONS = [
   { version: 3, name: "ficha del paciente, foto, consentimiento y umbrales", file: "003_patient_profile.sql" },
   { version: 4, name: "análisis posterior de cada sesión", file: "004_session_analysis.sql" },
   { version: 5, name: "especificación de cada ejercicio", file: "005_exercise_specs.sql" },
+  { version: 6, name: "cuentas, sesiones, bloqueo y auditoría", file: "006_auth.sql" },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.at(-1).version;

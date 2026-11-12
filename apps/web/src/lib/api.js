@@ -2,9 +2,10 @@
 const BASE = "/api";
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, code) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -20,7 +21,11 @@ async function request(path, options = {}) {
     throw new ApiError("No se pudo conectar con el servidor. Verifica que el backend esté corriendo (npm start en apps/backend).", 0);
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(data.error ?? `Error ${res.status}`, res.status);
+  if (!res.ok) {
+    // Sesión vencida o cerrada desde otro lugar: la app vuelve al ingreso (no aplica al intento de ingresar ni a la consulta inicial).
+    if (res.status === 401 && path !== "/auth/login" && path !== "/auth/me") window.dispatchEvent(new Event("auth:expired"));
+    throw new ApiError(data.error ?? `Error ${res.status}`, res.status, data.code);
+  }
   return data;
 }
 
@@ -36,10 +41,38 @@ const tz = () => -new Date().getTimezoneOffset();
 export const photoUrl = (p) => `${BASE}/patients/${p.id}/photo?v=${encodeURIComponent(p.photo_v ?? "")}`;
 
 export const api = {
+  // Cuentas
+  setupStatus: () => request("/auth/setup-status"),
+  setup: (body) => request("/auth/setup", { method: "POST", body }),
+  login: (email, password) => request("/auth/login", { method: "POST", body: { email, password } }),
+  logout: () => request("/auth/logout", { method: "POST" }),
+  me: () => request("/auth/me"),
+  changePassword: (current, password) => request("/auth/password", { method: "POST", body: { current, password } }),
+  adminTherapists: () => request("/admin/therapists"),
+  adminCreateTherapist: (body) => request("/admin/therapists", { method: "POST", body }),
+  adminSetActive: (id, active) => request(`/admin/users/${id}`, { method: "PATCH", body: { active } }),
+  adminResetPassword: (id, password) => request(`/admin/users/${id}/password`, { method: "POST", body: { password } }),
+  setPatientPassword: (patientId, password) => request(`/patients/${patientId}/password`, { method: "POST", body: { password } }),
+
   therapists: () => request("/therapists"),
   therapistPatients: (id) => request(`/therapists/${id}/patients`),
   therapistSummary: (id) => request(`/therapists/${id}/summary?tz=${tz()}`),
   patientOverview: (id) => request(`/patients/${id}/overview?tz=${tz()}`),
+  // Servicio de pose opcional (RTMPose). Analizar envía el VIDEO al servidor: solo con consentimiento del paciente.
+  poseStatus: () => request("/pose/status"),
+  async analyzeVideoOnServer(file, { exerciseCode, side, targetAngle, mode = "balanced", signal }) {
+    const query = new URLSearchParams({ exercise_code: exerciseCode, side, target_angle: String(targetAngle), mode });
+    let res;
+    try {
+      res = await fetch(`${BASE}/pose/analyze-video?${query}`, { method: "POST", headers: { "content-type": file.type || "video/mp4" }, body: file, signal });
+    } catch (e) {
+      if (e.name === "AbortError") throw e;
+      throw new ApiError("No se pudo conectar con el servidor.", 0);
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new ApiError(data.error ?? `Error ${res.status}`, res.status);
+    return data;
+  },
   saveSession: (patientId, body) => request(`/patients/${patientId}/sessions`, { method: "POST", body }),
 
   // Biblioteca, rutinas y evidencia
@@ -57,16 +90,16 @@ export const api = {
   patient: (id) => request(`/patients/${id}`),
   createPlan: (patientId, body) => request(`/patients/${patientId}/plans`, { method: "POST", body }),
   updatePlan: (planId, body) => request(`/plans/${planId}`, { method: "PATCH", body }),
-  assignRoutine: (patientId, routine_code, assigned_by) => request(`/patients/${patientId}/routines`, { method: "POST", body: { routine_code, assigned_by } }),
+  assignRoutine: (patientId, routine_code) => request(`/patients/${patientId}/routines`, { method: "POST", body: { routine_code } }),
   unassignRoutine: (patientId, assignmentId) => request(`/patients/${patientId}/routines/${assignmentId}`, { method: "DELETE" }),
   notes: (patientId) => request(`/patients/${patientId}/notes`),
-  addNote: (patientId, author_id, body) => request(`/patients/${patientId}/notes`, { method: "POST", body: { author_id, body } }),
+  addNote: (patientId, body) => request(`/patients/${patientId}/notes`, { method: "POST", body: { body } }),
   sessions: (patientId) => request(`/patients/${patientId}/sessions`),
   session: (id) => request(`/sessions/${id}`),
   coach: (patientId, params = {}) => request(`/patients/${patientId}/coach${qs(params)}`),
   sessionTrace: (id) => request(`/sessions/${id}/trace`),
   reanalyzeSession: (id) => request(`/sessions/${id}/analysis`, { method: "POST" }),
-  setConsent: (patientId, granted, recorded_by) => request(`/patients/${patientId}/consent`, { method: "PUT", body: { granted, recorded_by } }),
+  setConsent: (patientId, granted) => request(`/patients/${patientId}/consent`, { method: "PUT", body: { granted } }),
   uploadPhoto: async (patientId, jpegBlob) => {
     let res;
     try {

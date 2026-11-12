@@ -83,7 +83,13 @@ al servidor solo viaja el resultado numérico de cada repetición (grados alcanz
 6. Al abrir «Inicio», `GET /patients/5/overview` devuelve el estado **ya calculado por el servidor**
    (`summarizePatient`): la pantalla solo lo dibuja.
 
-## 5. Estado actual y brecha de seguridad (importante)
+## 5. Estado actual (noviembre de 2026): cuentas implementadas
+
+**Hecho:** contraseñas con scrypt, sesión con token opaco guardado como hash (cookie `HttpOnly` + `SameSite=Strict` para la web, `Bearer` para clientes móviles con la cabecera `X-Client: mobile`), bloqueo de la cuenta 15 min tras 5 fallos, límite de intentos por conexión, mensaje genérico (no revela qué correos existen), sesión de 12 h renovable y revocable, cambio obligatorio de la contraseña inicial, roles (paciente, fisioterapeuta, administrador), **política de acceso única en el servidor** (`apps/backend/src/policy.js`: lo no listado está prohibido; ajeno = 404), identidad de quien actúa tomada de la sesión (no del cuerpo), protección contra CSRF por origen, tabla `audit_log` y cabeceras de seguridad básicas. Una prueba recorre todas las rutas y comprueba que ninguna responde sin sesión.
+
+**Pendiente:** correo de invitación y de recuperación de contraseña (hoy el fisioterapeuta entrega una contraseña temporal), HTTPS y dominio, límite de intentos que sobreviva a reinicios y varias instancias (hoy en memoria), rotación de la sesión al elevar privilegios, visor de la auditoría, y copia de seguridad.
+
+### Antes de la implementación (texto original de la brecha)
 
 Hoy la API **no tiene autenticación**: quien conozca la URL puede pedir `/patients/5` y ver los datos o la foto de
 cualquier paciente, porque el identificador va en la ruta y el servidor confía en él. Eso es aceptable para una demostración

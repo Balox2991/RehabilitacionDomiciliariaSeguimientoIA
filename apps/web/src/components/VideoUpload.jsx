@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "../lib/api.js";
 import { bodyPartOf } from "../lib/exercise.js";
 import { saveSessionSafely } from "../lib/saveSession.js";
 import { buildSessionPayload } from "../lib/sessionPayload.js";
@@ -14,6 +15,32 @@ export default function VideoUpload({ pid, plan, exercise, onSaved, onBack }) {
   const stop = useRef(false);
   const input = useRef(null);
   const working = state.status === "working";
+  // Motor de análisis: "browser" (MediaPipe, el video no sale del dispositivo) o "server" (RTMPose, el video se envía).
+  const [engine, setEngine] = useState("browser");
+  const [serverOk, setServerOk] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const abort = useRef(null);
+  useEffect(() => { api.poseStatus().then((s) => setServerOk(Boolean(s.available))).catch(() => setServerOk(false)); }, []);
+
+  async function analyze(file) {
+    if (engine === "browser") {
+      return analyzeVideoFile(file, {
+        exercise, side: plan.side, targetAngle: plan.target_angle,
+        onProgress: (f) => setState((s) => (s.status === "working" ? { ...s, progress: f, message: "Analizando tu movimiento…" } : s)),
+        shouldStop: () => stop.current,
+      });
+    }
+    abort.current = new AbortController();
+    setState({ status: "working", progress: 0, indeterminate: true, message: "Enviando el video y analizándolo con el servicio de IA (puede tardar unos minutos)…" });
+    try {
+      const out = await api.analyzeVideoOnServer(file, { exerciseCode: exercise.id, side: plan.side, targetAngle: plan.target_angle, signal: abort.current.signal });
+      const t = out.trace.t;
+      return { cancelled: false, trace: out.trace, seen: out.frames_with_person, total: out.frames_total, seconds: (t.at(-1) ?? 0) / 1000 };
+    } catch (e) {
+      if (e.name === "AbortError") return { cancelled: true };
+      throw e;
+    }
+  }
 
   async function onFile(e) {
     const file = e.target.files?.[0];
@@ -22,11 +49,7 @@ export default function VideoUpload({ pid, plan, exercise, onSaved, onBack }) {
     stop.current = false;
     setState({ status: "working", progress: 0, message: "Abriendo el video…" });
     try {
-      const r = await analyzeVideoFile(file, {
-        exercise, side: plan.side, targetAngle: plan.target_angle,
-        onProgress: (f) => setState((s) => (s.status === "working" ? { ...s, progress: f, message: "Analizando tu movimiento…" } : s)),
-        shouldStop: () => stop.current,
-      });
+      const r = await analyze(file);
       if (r.cancelled) return setState({ status: "idle", progress: 0, message: "" });
       if (r.total === 0 || r.seen / r.total < MIN_SEEN) {
         throw new VideoError(`No pudimos ver tu ${bodyPartOf(exercise)} en el video. Graba de perfil, de cuerpo completo y con buena luz, y vuelve a intentarlo.`);
@@ -49,7 +72,7 @@ export default function VideoUpload({ pid, plan, exercise, onSaved, onBack }) {
     <section className="card panel video-upload" aria-labelledby="h-upload">
       <div className="panel-head">
         <h2 id="h-upload">Sube un video de tu serie</h2>
-        <p>Grábate con tu celular haciendo el ejercicio y elige el video aquí. <strong>El video no se sube a internet:</strong> se analiza en tu propio navegador y solo se guardan los ángulos y un esquema de tu cuerpo.</p>
+        <p>Grábate con tu celular haciendo el ejercicio y elige el video aquí. <strong>Por defecto el video no se sube a internet:</strong> se analiza en tu propio navegador y solo se guardan los ángulos y un esquema de tu cuerpo.</p>
       </div>
       <ul className="video-tips">
         <li>De perfil a la cámara y de cuerpo completo, con buena luz y un fondo despejado.</li>
@@ -59,16 +82,35 @@ export default function VideoUpload({ pid, plan, exercise, onSaved, onBack }) {
 
       {working ? (
         <div className="video-progress" role="status">
-          <div className="meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(state.progress * 100)} aria-label="Progreso del análisis"><span style={{ width: `${Math.round(state.progress * 100)}%` }} /></div>
-          <p>{state.message} <span className="num">{Math.round(state.progress * 100)} %</span></p>
-          {state.progress < 1 && <button type="button" className="btn btn-ghost" onClick={() => { stop.current = true; }}>Cancelar</button>}
+          <div className="meter" role="progressbar" aria-label="Progreso del análisis" {...(state.indeterminate ? {} : { "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": Math.round(state.progress * 100) })}><span style={{ width: state.indeterminate ? "100%" : `${Math.round(state.progress * 100)}%`, opacity: state.indeterminate ? 0.35 : 1 }} /></div>
+          <p>{state.message} {!state.indeterminate && <span className="num">{Math.round(state.progress * 100)} %</span>}</p>
+          {state.progress < 1 && <button type="button" className="btn btn-ghost" onClick={() => { stop.current = true; abort.current?.abort(); }}>Cancelar</button>}
         </div>
       ) : (
+        <>
+        <fieldset className="engine-choice">
+          <legend>¿Cómo analizamos tu video?</legend>
+          <label className="engine-option">
+            <input type="radio" name="engine" checked={engine === "browser"} onChange={() => setEngine("browser")} />
+            <span><strong>En mi navegador</strong> — privado: el video no sale de tu dispositivo.</span>
+          </label>
+          <label className={`engine-option${serverOk ? "" : " is-disabled"}`}>
+            <input type="radio" name="engine" disabled={!serverOk} checked={engine === "server"} onChange={() => setEngine("server")} />
+            <span><strong>Servicio de IA avanzado (RTMPose)</strong> — más preciso, pero tarda más{serverOk ? "" : " (no disponible ahora)"}.</span>
+          </label>
+          {engine === "server" && (
+            <label className="engine-consent">
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <span>Entiendo que este video <strong>se enviará al servidor</strong> para analizarlo y que no se guarda: se borra al terminar. Solo se conservan los ángulos y el esquema del cuerpo.</span>
+            </label>
+          )}
+        </fieldset>
         <div className="flow-actions">
-          <input ref={input} type="file" accept="video/*" className="sr-only" id="video-file" onChange={onFile} />
-          <label htmlFor="video-file" className="btn btn-primary btn-lg"><Icon name="video" size={18} /> Elegir un video</label>
+          <input ref={input} type="file" accept="video/*" className="sr-only" id="video-file" onChange={onFile} disabled={engine === "server" && !consent} />
+          <label htmlFor="video-file" className="btn btn-primary btn-lg" aria-disabled={engine === "server" && !consent} onClick={(e) => { if (engine === "server" && !consent) e.preventDefault(); }} style={engine === "server" && !consent ? { opacity: 0.5, cursor: "not-allowed" } : undefined}><Icon name="video" size={18} /> Elegir un video</label>
           <button type="button" className="btn btn-ghost btn-lg" onClick={onBack}>Volver</button>
         </div>
+        </>
       )}
       {state.status === "error" && <p className="notice notice-error" role="alert">{state.message}</p>}
     </section>

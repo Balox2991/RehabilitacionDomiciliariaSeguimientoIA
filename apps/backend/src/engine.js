@@ -4,3 +4,5 @@ export { ANALYZER_VERSION, TRACE_FORMAT, analyzeSession } from "../../tracking-p
 export { SKELETON_JOINTS } from "../../tracking-prototype/src/traceRecorder.js";
 export { SPECS, validateSpec } from "../../tracking-prototype/src/exerciseSpecs.js";
 export { COACH, coach } from "../../tracking-prototype/src/coach.js";
+export { EXERCISES } from "../../tracking-prototype/src/angleMath.js";
+export { runPosePass } from "../../tracking-prototype/src/videoPass.js";

@@ -4,6 +4,7 @@ import { api } from "../../lib/api.js";
 import { useAsync } from "../../lib/useAsync.js";
 import { FILTERS, SORTS, applyView } from "../../lib/patientList.js";
 import { PHASES, PHASE_ORDER } from "../../lib/labels.js";
+import { passwordProblem, suggestPassword } from "../../lib/passwordRules.js";
 import { ErrorState, Loading } from "../../components/PageState.jsx";
 import EmptyState from "../../components/EmptyState.jsx";
 import Field from "../../components/Field.jsx";
@@ -95,7 +96,7 @@ export default function Patients() {
 // Alta rápida: lo mínimo para empezar. La ficha completa se termina de llenar en la pestaña «Datos» del paciente.
 function NewPatient({ tid, onCancel }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", fracture_site: "", injury_date: "", recovery_phase: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", fracture_site: "", injury_date: "", recovery_phase: "", password: suggestPassword() });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -105,10 +106,12 @@ function NewPatient({ tid, onCancel }) {
     setSaving(true);
     setError("");
     try {
-      const body = { name: form.name, email: form.email, therapist_id: Number(tid) };
+      const problem = passwordProblem(form.password, form.email);
+      if (problem) throw new Error(problem);
+      const body = { name: form.name, email: form.email, password: form.password };
       for (const k of ["phone", "fracture_site", "injury_date", "recovery_phase"]) if (form[k]) body[k] = form[k];
       const created = await api.createPatient(body);
-      navigate(`/fisio/${tid}/paciente/${created.id}/datos`);
+      navigate(`/fisio/${tid}/paciente/${created.id}/datos`, { state: { initialPassword: form.password } });
     } catch (err) {
       setError(err.message);
       setSaving(false);
@@ -121,6 +124,7 @@ function NewPatient({ tid, onCancel }) {
       <div className="form-grid">
         <Field label="Nombre completo"><input required value={form.name} onChange={set("name")} autoComplete="off" /></Field>
         <Field label="Correo electrónico"><input required type="email" value={form.email} onChange={set("email")} autoComplete="off" /></Field>
+        <Field label="Contraseña inicial" hint="Entrégasela al paciente: la cambiará en su primer ingreso. Se muestra una vez más en su ficha."><input required value={form.password} onChange={set("password")} autoComplete="off" /></Field>
         <Field label="Celular" hint="10 dígitos, empieza por 3. Ej. 300 123 4567"><input type="tel" inputMode="tel" value={form.phone} onChange={set("phone")} autoComplete="off" /></Field>
         <Field label="Lesión"><input value={form.fracture_site} onChange={set("fracture_site")} placeholder="Ej. Tibia derecha" /></Field>
         <Field label="Fecha de la lesión"><input type="date" value={form.injury_date} onChange={set("injury_date")} /></Field>

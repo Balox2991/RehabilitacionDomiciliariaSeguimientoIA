@@ -1,9 +1,11 @@
 import { NavLink, Outlet, useParams } from "react-router-dom";
+import { useAuth } from "../../lib/auth.jsx";
 import Icon from "../../components/Icon.jsx";
 
 // Panel del fisioterapeuta: menú lateral con las cuatro áreas de trabajo.
 export default function TherapistLayout() {
   const { tid } = useParams();
+  const { user } = useAuth();
   const base = `/fisio/${tid}`;
   const items = [
     { to: base, label: "Resumen", icon: "grid", end: true },
@@ -11,6 +13,7 @@ export default function TherapistLayout() {
     { to: `${base}/biblioteca`, label: "Biblioteca", icon: "book" },
     { to: `${base}/evidencia`, label: "Evidencia clínica", icon: "flask" },
     { to: `${base}/configuracion`, label: "Configuración", icon: "gear" },
+    ...(user?.is_admin ? [{ to: `${base}/cuentas`, label: "Cuentas", icon: "users" }] : []),
   ];
   return (
     <div className="workspace container">
@@ -23,7 +26,6 @@ export default function TherapistLayout() {
             </NavLink>
           ))}
         </nav>
-        <p className="side-note">Modo demostración con datos ficticios.</p>
       </aside>
       <div className="workspace-main">
         <Outlet />

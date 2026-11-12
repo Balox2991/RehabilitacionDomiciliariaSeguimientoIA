@@ -23,7 +23,9 @@ sustentación).
 - [~] **Fase 4 — Dashboard del fisioterapeuta** (`apps/web/`, en curso): hechos los KPIs,
       alertas, ficha, prescripción de planes y rutinas, análisis por sesión y sugerencias del
       asistente; faltan los reportes redactados con IA.
-- [ ] Fase 5 — Autenticación por rol y pulido de interfaz
+- [~] **Fase 5 — Autenticación por rol** (hecha: cuentas, sesiones, roles, permisos en el servidor, bloqueo, auditoría,
+      cambio de contraseña, administración de fisioterapeutas; faltan correo de invitación/recuperación, HTTPS y pulido de interfaz).
+      Ver `docs/ARQUITECTURA.md` §5 y §6.
 - [ ] Fase 6 — Documentación técnica final
 
 Ver también `docs/CONSIDERACIONES-COLOMBIA.md` (ficha del paciente, normas colombianas y recomendaciones).
@@ -35,6 +37,7 @@ telerehab-ia/
 ├── apps/
 │   ├── tracking-prototype/   Fase 1: prototipo aislado de tracking (HTML/JS + MediaPipe)
 │   ├── backend/              Fase 2: API REST (Express) + SQLite
+│   ├── pose-service/         Servicio de pose opcional (FastAPI + RTMPose) para analizar videos
 │   └── web/                  Fases 3-4: app React (paciente + fisioterapeuta)
 ├── docs/                     Documentación técnica por fase
 └── README.md
@@ -47,4 +50,11 @@ cd apps/backend && npm install && npm run seed && npm start   # API :3001 (datos
 cd apps/web     && npm install && npm run dev                 # web :5173
 ```
 
-Pruebas: `npm test` dentro de cada app (backend 89, web 97, tracking-prototype 138).
+Servicio de pose (opcional, ver `apps/pose-service/README.md`): `uvicorn app.main:app --port 8000` y backend con `POSE_SERVICE_URL=http://localhost:8000`.
+
+**Primer ingreso:** con la base vacía, la pantalla de ingreso pide crear la cuenta del administrador. Con datos de demostración
+(`npm run seed -- --reset`) todas las cuentas usan la contraseña que imprime el comando (fisioterapeuta y administradora:
+`camila.restrepo@ejemplo.co`). Variables: `SETUP_TOKEN` (exige un token para crear el primer administrador), `COOKIE_SECURE=1`
+(cookie solo por HTTPS; obligatoria al publicar), `ALLOWED_ORIGINS`.
+
+Pruebas: `npm test` dentro de cada app (backend 112, web 99, tracking-prototype 138).

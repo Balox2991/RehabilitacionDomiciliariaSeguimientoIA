@@ -10,7 +10,7 @@ let server, base, db, th;
 
 before(async () => {
   db = openDb(":memory:");
-  server = createApp(db, { now: () => NOW }).listen(0);
+  server = createApp(db, { auth: false, now: () => NOW }).listen(0);
   await new Promise((r) => server.once("listening", r));
   base = `http://localhost:${server.address().port}`;
   th = (await call("POST", "/users", { role: "therapist", name: "Dra. Asistente", email: "asistente@x.co" })).body;

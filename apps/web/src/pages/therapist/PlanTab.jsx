@@ -156,7 +156,7 @@ export default function PlanTab() {
 
   async function assign() {
     if (!routineCode) return;
-    try { await api.assignRoutine(pid, routineCode, Number(tid)); setRoutineCode(""); changed(); } catch (err) { setProblem(err.message); }
+    try { await api.assignRoutine(pid, routineCode); setRoutineCode(""); changed(); } catch (err) { setProblem(err.message); }
   }
   async function unassign(id) {
     try { await api.unassignRoutine(pid, id); changed(); } catch (err) { setProblem(err.message); }

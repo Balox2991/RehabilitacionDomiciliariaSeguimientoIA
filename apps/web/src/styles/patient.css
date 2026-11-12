@@ -283,3 +283,11 @@ body:has(.area-patient) { background: var(--bg-warm); }
   .brand-text { display: none; } /* queda la marca (la cruz); el botón de la derecha no se parte en dos líneas */
   .topnav-switch { white-space: nowrap; }
 }
+
+/* Elección del motor de análisis del video (navegador / servicio de IA) */
+.engine-choice { border: 1px solid var(--line, #d9e0e6); border-radius: 12px; padding: 12px 16px; display: grid; gap: 10px; margin: 0 0 16px; }
+.engine-choice legend { font-weight: 600; padding: 0 6px; }
+.engine-option, .engine-consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; color: var(--ink-2); cursor: pointer; }
+.engine-option input, .engine-consent input { margin-top: 3px; }
+.engine-option.is-disabled { opacity: 0.55; cursor: not-allowed; }
+.engine-consent { background: var(--surface-2, #f3f6f8); border-radius: 8px; padding: 10px 12px; }

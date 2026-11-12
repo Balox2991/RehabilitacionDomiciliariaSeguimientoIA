@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { api } from "../lib/api.js";
+import { homeFor, useAuth } from "../lib/auth.jsx";
+import { passwordProblem } from "../lib/passwordRules.js";
 import { normalizeEmail, validateLogin } from "../lib/loginForm.js";
 import Icon from "../components/Icon.jsx";
 
@@ -15,6 +18,16 @@ export default function Login() {
   const [touched, setTouched] = useState({});
   const [show, setShow] = useState(false);
   const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [setup, setSetup] = useState(null); // null = aún no se sabe · { name } = primera vez: crear al administrador
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => { api.setupStatus().then((r) => setSetup(r.needs_setup ? { name: "" } : null), () => {}); }, []);
+  useEffect(() => { if (location.state?.expired) setNotice("Tu sesión se cerró. Ingresa de nuevo."); }, [location.state]);
+
+  if (auth.status === "in") return <Navigate to={auth.user.must_change_password ? "/cambiar-clave" : homeFor(auth.user)} replace />;
 
   const errors = validateLogin(values);
   const showError = (field) => touched[field] && errors[field];
@@ -24,13 +37,27 @@ export default function Login() {
     setNotice("");
   };
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     setTouched({ email: true, password: true });
     if (Object.keys(errors).length) return;
-    setValues((v) => ({ ...v, email: normalizeEmail(v.email) }));
-    // El inicio de sesión con cuentas reales llega con la autenticación (siguiente etapa del proyecto).
-    setNotice("El inicio de sesión con cuentas reales se activa en la siguiente etapa. Mientras tanto puedes recorrer la aplicación en modo demostración.");
+    const email = normalizeEmail(values.email);
+    setBusy(true);
+    setNotice("");
+    try {
+      if (setup) {
+        const problem = !setup.name.trim() ? "Escribe tu nombre." : passwordProblem(values.password, email);
+        if (problem) throw new Error(problem);
+        await api.setup({ name: setup.name.trim(), email, password: values.password });
+        setSetup(null);
+      }
+      const user = await auth.login(email, values.password);
+      const back = location.state?.from;
+      navigate(user.must_change_password ? "/cambiar-clave" : back?.startsWith(homeFor(user)) ? back : homeFor(user), { replace: true });
+    } catch (err) {
+      setNotice(err.message);
+      setBusy(false);
+    }
   }
 
   return (
@@ -53,11 +80,17 @@ export default function Login() {
         <div className="auth-card">
           <img className="auth-logo" src="/brand/logo-completo.png" alt="Clínica Ocaña · App rehabilitación física" width="180" height="162" />
           <div className="auth-head">
-            <h2>Te damos la bienvenida</h2>
-            <p>Ingresa con tu cuenta para continuar con tu rehabilitación.</p>
+            <h2>{setup ? "Configuración inicial" : "Te damos la bienvenida"}</h2>
+            <p>{setup ? "Aún no hay cuentas. Crea la cuenta del administrador de la clínica." : "Ingresa con tu cuenta para continuar con tu rehabilitación."}</p>
           </div>
 
           <form onSubmit={submit} noValidate className="auth-form">
+            {setup && (
+              <div className="auth-field">
+                <label htmlFor="setup-name">Nombre completo</label>
+                <input id="setup-name" autoComplete="name" value={setup.name} onChange={(e) => setSetup({ name: e.target.value })} />
+              </div>
+            )}
             <div className={`auth-field ${showError("email") ? "has-error" : ""}`}>
               <label htmlFor="login-email">Correo electrónico</label>
               <input
@@ -72,7 +105,7 @@ export default function Login() {
               <label htmlFor="login-password">Contraseña</label>
               <div className="auth-password">
                 <input
-                  id="login-password" type={show ? "text" : "password"} autoComplete="current-password" placeholder="Tu contraseña"
+                  id="login-password" type={show ? "text" : "password"} autoComplete={setup ? "new-password" : "current-password"} placeholder={setup ? "Mínimo 10 caracteres, letras y números" : "Tu contraseña"}
                   value={values.password} onChange={set("password")} onBlur={() => setTouched((t) => ({ ...t, password: true }))}
                   aria-invalid={showError("password") ? "true" : undefined} aria-describedby={showError("password") ? "login-password-err" : undefined}
                 />
@@ -83,15 +116,12 @@ export default function Login() {
               {showError("password") && <p className="auth-error" id="login-password-err">{errors.password}</p>}
             </div>
 
-            <button type="submit" className="btn btn-primary btn-lg btn-block auth-submit">Ingresar</button>
-            {notice && <p className="notice notice-info" role="status">{notice}</p>}
+            <button type="submit" className="btn btn-primary btn-lg btn-block auth-submit" disabled={busy}>{busy ? "Ingresando…" : setup ? "Crear cuenta e ingresar" : "Ingresar"}</button>
+            {notice && <p className="notice notice-info" role="alert">{notice}</p>}
           </form>
 
-          <p className="auth-help">¿Aún no tienes cuenta? Tu fisioterapeuta te registra y te envía una invitación por correo.</p>
-          <p className="auth-demo">
-            <Link to="/demo">Entrar en modo demostración</Link>
-            <small>Temporal, con datos ficticios, hasta activar las cuentas reales.</small>
-          </p>
+          <p className="auth-help">¿Aún no tienes cuenta? Tu fisioterapeuta te registra y te entrega tu contraseña inicial.</p>
+
         </div>
         <p className="auth-foot">Proyecto de grado · Ingeniería de Sistemas. No es un dispositivo médico.</p>
       </main>

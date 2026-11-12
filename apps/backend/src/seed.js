@@ -11,6 +11,7 @@ import { rmSync, existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { openDb } from "./db.js";
 import { createApp } from "./app.js";
+import { hashPassword } from "./auth.js";
 
 const dbFile = process.env.DB_FILE ?? fileURLToPath(new URL("../data/telerehab.db", import.meta.url));
 if (process.argv.includes("--reset") && existsSync(dbFile)) rmSync(dbFile);
@@ -21,7 +22,7 @@ if (db.prepare("SELECT COUNT(*) AS n FROM users").get().n > 0) {
   process.exit(1);
 }
 
-const server = createApp(db).listen(0);
+const server = createApp(db, { auth: false }).listen(0);
 await new Promise((r) => server.once("listening", r));
 const base = `http://localhost:${server.address().port}`;
 
@@ -126,6 +127,13 @@ for (const [i, p] of PATIENTS.entries()) {
   }
 }
 
+// Cuentas de demostración: todas con la misma contraseña (SOLO para datos ficticios; nunca la uses con pacientes reales).
+// La primera fisioterapeuta es también administradora.
+const demoPassword = process.env.DEMO_PASSWORD ?? "Demo-Telerehab-2026";
+db.prepare("UPDATE users SET password_hash = ?").run(hashPassword(demoPassword));
+db.prepare("UPDATE users SET is_admin = 1 WHERE id = ?").run(therapist.id);
+
 server.close();
+console.log(`Contraseña de las cuentas de demostración: ${demoPassword}  (fisioterapeuta y administradora: camila.restrepo@ejemplo.co · pacientes: p. ej. andres.mejia@ejemplo.co)`);
 console.log(`Datos de demostración creados en ${dbFile}`);
 console.log(`  1 fisioterapeuta (id ${therapist.id}), ${PATIENTS.length} pacientes, ${sessionsCreated} sesiones`);

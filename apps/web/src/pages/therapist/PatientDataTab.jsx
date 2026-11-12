@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 import { api } from "../../lib/api.js";
 import { useAsync } from "../../lib/useAsync.js";
 import { useSectionForm } from "../../lib/useSectionForm.js";
 import { resizeToJpeg } from "../../lib/image.js";
 import { CIE10_SUGGESTIONS, DOCUMENT_TYPES, SIDE_LABEL, formatDateCo } from "../../lib/colombia.js";
 import { PHASES, PHASE_ORDER } from "../../lib/labels.js";
+import { suggestPassword } from "../../lib/passwordRules.js";
 import { ErrorState, Loading } from "../../components/PageState.jsx";
 import Avatar from "../../components/Avatar.jsx";
 import Field, { FormFooter } from "../../components/Field.jsx";
@@ -85,6 +86,40 @@ function PhotoCard({ patient, onSaved }) {
   );
 }
 
+// Acceso del paciente: el fisioterapeuta le define (o restablece) la contraseña temporal; el paciente la cambia al ingresar.
+function AccessCard({ patient }) {
+  const location = useLocation();
+  const [shown, setShown] = useState(location.state?.initialPassword ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function reset() {
+    const password = suggestPassword();
+    setBusy(true);
+    setError("");
+    try {
+      await api.setPatientPassword(patient.id, password);
+      setShown(password);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card panel" aria-labelledby="h-access">
+      <h2 id="h-access"><Icon name="shield" size={18} /> Acceso a la aplicación</h2>
+      <p>El paciente ingresa con su correo <strong>{patient.email}</strong>. Si olvidó su contraseña, genera una temporal y entrégasela; tendrá que cambiarla al ingresar.</p>
+      {shown && <p className="notice notice-info" role="status">Contraseña temporal: <strong>{shown}</strong>. Anótala y entrégasela ahora: no se vuelve a mostrar.</p>}
+      {error && <p className="notice notice-error" role="alert">{error}</p>}
+      <div className="form-footer-buttons">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={reset} disabled={busy}>{busy ? "Generando…" : "Restablecer contraseña"}</button>
+      </div>
+    </section>
+  );
+}
+
 // Autorización para tratar datos personales (Ley 1581 de 2012): los datos de salud son «sensibles».
 function ConsentCard({ patient, tid, onSaved }) {
   const [asking, setAsking] = useState(false);
@@ -96,7 +131,7 @@ function ConsentCard({ patient, tid, onSaved }) {
     setBusy(true);
     setError("");
     try {
-      await api.setConsent(patient.id, value, Number(tid));
+      await api.setConsent(patient.id, value);
       setAsking(false);
       onSaved();
     } catch (err) {
@@ -209,6 +244,7 @@ export default function PatientDataTab() {
       </Section>
 
       <ConsentCard patient={patient} tid={tid} onSaved={saved} />
+      <AccessCard patient={patient} />
     </div>
   );
 }
