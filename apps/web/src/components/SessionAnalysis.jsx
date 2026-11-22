@@ -19,9 +19,19 @@ export default function SessionAnalysis({ session, onChange }) {
   const a = session.analysis;
   const targetFlexion = session.direction === "decreasing" ? 180 - session.target_angle : session.target_angle;
 
+  const q = session.quality;
+  const qualityBanner = q && q.verdict !== "reliable" && (
+    <div className={`notice ${q.verdict === "unreliable" ? "notice-error" : ""}`} role="note">
+      <strong>{q.verdict === "unreliable" ? "Los ángulos de esta sesión no son fiables." : "Los ángulos de esta sesión son aproximados."}</strong>{" "}
+      {q.verdict === "unreliable" ? "No los uses para decidir el plan; pídele al paciente repetir con mejor encuadre." : "Tómalos con reserva."}
+      {q.advice.length > 0 && <ul>{q.advice.map((t) => <li key={t}>{t}</li>)}</ul>}
+    </div>
+  );
+
   if (!a) {
     return (
       <div className="sa">
+        {qualityBanner}
         <p className="sa-note">Esta sesión no tiene análisis detallado (se guardó sin registro de movimiento). Estas son sus repeticiones:</p>
         <ol className="rep-list">
           {session.reps.map((r) => (
@@ -51,6 +61,7 @@ export default function SessionAnalysis({ session, onChange }) {
 
   return (
     <div className="sa">
+      {qualityBanner}
       <div className="kpi-grid sa-kpis">
         <Kpi label="Repeticiones" value={s.count} unit={s.expected ? ` de ${s.expected}` : ""} hint={`${s.reached_target} llegaron a la meta`} />
         <Kpi label="Mejor flexión" value={s.rom.best == null ? null : Math.round(s.rom.best)} unit="°" hint={`Meta ${Math.round(targetFlexion)}° · promedio ${s.rom.mean == null ? "—" : Math.round(s.rom.mean)}°`} />

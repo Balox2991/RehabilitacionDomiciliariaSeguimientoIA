@@ -86,7 +86,7 @@ export default function Patients() {
         </div>
       ) : (
         <ul className="prow-list">
-          {shown.map((p) => <PatientRow key={p.id} p={p} tid={tid} />)}
+          {shown.map((p, i) => <PatientRow key={p.id} p={p} tid={tid} index={i} />)}
         </ul>
       )}
     </div>

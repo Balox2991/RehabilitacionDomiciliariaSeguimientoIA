@@ -27,7 +27,7 @@ let therapist, patient;
 test("el catálogo trae los ejercicios medidos con cámara, cada uno con su especificación", async () => {
   const { status, body } = await call("GET", "/exercises");
   assert.equal(status, 200);
-  assert.deepEqual(body.map((e) => e.code), ["knee_flexion", "elbow_flexion", "shoulder_flexion", "straight_leg_raise"]);
+  assert.deepEqual(body.map((e) => e.code), ["knee_flexion", "elbow_flexion", "shoulder_flexion", "shoulder_abduction", "straight_leg_raise"]);
   const byCode = Object.fromEntries(body.map((e) => [e.code, e]));
   assert.deepEqual(byCode.knee_flexion.spec.measure, { type: "joint_angle", points: ["hip", "knee", "ankle"] });
   assert.deepEqual(byCode.straight_leg_raise.spec.measure, { type: "segment_angle", from: "hip", to: "knee", reference: "horizontal" });

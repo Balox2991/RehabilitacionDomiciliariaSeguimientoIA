@@ -47,7 +47,7 @@ const sessionBody = (trace, over = {}) => ({
 });
 
 test("la migración 4 existe y deja la tabla de análisis", () => {
-  assert.equal(SCHEMA_VERSION, 6);
+  assert.equal(SCHEMA_VERSION, 7);
   assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE name = 'session_analysis'").get());
 });
 
@@ -170,4 +170,31 @@ test("las alertas de postura del registro pasan a cada repetición guardada", as
   const r = await call("POST", `/patients/${patient.body.id}/sessions`, sessionBody(t));
   assert.equal(r.body.compensation_count, 6);
   assert.deepEqual(r.body.reps[0].compensation_flags, ["Inclinación de tronco"]);
+});
+
+test("la calidad de la medición se calcula en el servidor y se guarda con la sesión", async () => {
+  const good = await call("POST", `/patients/${patient.body.id}/sessions`, sessionBody(makeTrace()));
+  assert.equal(good.status, 201);
+  assert.equal(good.body.quality.verdict, "reliable");
+  assert.equal(good.body.quality.failed.length, 0);
+  const list = (await call("GET", `/patients/${patient.body.id}/sessions`)).body;
+  assert.equal(list.find((s) => s.id === good.body.id).quality_verdict, "reliable");
+});
+
+test("una medición sin la articulación a la vista queda como no fiable, con consejos, y no cuenta para el asistente", async () => {
+  const bad = makeTrace();
+  bad.vis = bad.vis.map((_, i) => (i % 2 ? 0.1 : 1)); // la mitad de los cuadros sin la articulación visible
+  const r = await call("POST", `/patients/${patient.body.id}/sessions`, sessionBody(bad, { started_at: "2026-10-06T15:00:00.000Z", ended_at: "2026-10-06T15:02:00.000Z" }));
+  assert.equal(r.status, 201);
+  assert.equal(r.body.quality.verdict, "unreliable");
+  assert.ok(r.body.quality.advice.length >= 1);
+  assert.equal((await call("GET", `/patients/${patient.body.id}/sessions`)).body.find((s) => s.id === r.body.id).quality_verdict, "unreliable");
+  const coach = await call("GET", `/patients/${patient.body.id}/coaching`);
+  const ids = JSON.stringify(coach.body);
+  assert.ok(!ids.includes(`"id":${r.body.id},`), "la sesión no fiable no debe aparecer en el historial del asistente");
+});
+
+test("una sesión sin registro no tiene calidad (no hay de dónde juzgarla)", async () => {
+  const r = await call("POST", `/patients/${patient.body.id}/sessions`, sessionBody(undefined));
+  assert.equal(r.body.quality, null);
 });

@@ -4,3 +4,4 @@ apps/backend/data/
 .env
 dist/
 logs/
+docs/video/*.mp4

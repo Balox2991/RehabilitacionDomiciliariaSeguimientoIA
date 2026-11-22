@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api.js";
 import { VIEW_ADVICE_TEXT, bodyPartOf, exerciseOf, setupTips } from "../../lib/exercise.js";
@@ -17,6 +17,9 @@ import InsightList from "../../components/InsightList.jsx";
 import PatientPage from "../../components/PatientPage.jsx";
 import RepBars from "../../components/RepBars.jsx";
 import VideoUpload from "../../components/VideoUpload.jsx";
+import { assessReliability } from "@engine/reliability.js";
+import { sessionQualityNote } from "../../lib/quality.js";
+import { coachPrompt, goalFraction } from "../../lib/coachPrompt.js";
 import { useTracking } from "../../tracking/useTracking.js";
 
 const STEPS = [
@@ -146,20 +149,28 @@ function Practice({ pid, plan, item, onSaved, onBack, debug }) {
   const t = useTracking({ exercise, side: plan.side, targetAngle: plan.target_angle });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [count, setCount] = useState(null); // cuenta regresiva 3-2-1 antes de calibrar (null = no está contando)
 
   const prog = setProgress(t.reps, plan.sets, plan.reps_per_set);
   const flex = t.angle == null ? null : flexionFromAngle(exercise.direction, t.angle);
   const running = t.phase === "running";
-  const resting = running && t.reps > 0 && !prog.complete && prog.repInSet === 0; // acaba de cerrar una serie
+  const q = t.quality;
+  const hidden = running && q.mode === "hidden"; // medición no fiable: sin ángulos ni repeticiones, con consejo y guía
+  const approx = running && q.mode === "approx";
+  const frac = hidden ? null : goalFraction(flex, plan.target_flexion);
+  const prompt = coachPrompt({
+    phase: t.phase, running, calibrated: t.calibrated, counting: count != null, hidden, visible: t.visible,
+    reps: t.reps, prog: { ...prog, sets: plan.sets }, saving,
+  });
 
-  const checklist = useMemo(
-    () => [
-      { label: "Enciende la cámara", done: running },
-      { label: "Calibra tu postura de reposo", done: t.calibrated },
-      { label: `Completa tus ${plan.sets} ${plan.sets === 1 ? "serie" : "series"} de ${plan.reps_per_set}`, done: prog.complete },
-    ],
-    [running, t.calibrated, prog.complete, plan.sets, plan.reps_per_set]
-  );
+  // Cuenta regresiva: la persona se coloca en reposo y la app calibra sola al llegar a 0.
+  useEffect(() => {
+    if (count == null) return undefined;
+    if (count === 0) { t.calibrate(); setCount(null); return undefined; }
+    const id = setTimeout(() => setCount((c) => (c == null ? c : c - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [count, t.calibrate]);
+  useEffect(() => { if (!running) setCount(null); }, [running]);
 
   async function finish() {
     const snap = t.snapshot();
@@ -169,8 +180,9 @@ function Practice({ pid, plan, item, onSaved, onBack, debug }) {
       // El dato guardado sale del análisis posterior del registro completo; si algo falla se conserva el conteo en vivo.
       const { body } = buildSessionPayload({ plan, snap, trace: t.buildTrace() });
       const session = await saveSessionSafely(pid, body); // si el servidor rechaza el registro, la sesión se guarda sin él
+      const quality = snap && t.buildTrace() ? assessReliability(t.buildTrace(), exercise) : null;
       t.stop();
-      onSaved(session);
+      onSaved({ ...session, _quality: quality });
     } catch (err) {
       setSaveError(err.message); // la sesión sigue en pantalla: se puede reintentar sin perder las repeticiones
     } finally {
@@ -178,46 +190,67 @@ function Practice({ pid, plan, item, onSaved, onBack, debug }) {
     }
   }
 
+  const act = { start: t.start, calibrate: () => setCount(3), save: finish }[prompt.action];
+  const actLabel = { start: "Encender cámara", calibrate: "Calibrar (3-2-1)", save: saving ? "Guardando…" : "Terminar y guardar" }[prompt.action];
+
   return (
     <div className="ex-grid">
       <div className="ex-left">
+        <section className={`coach-bar is-${prompt.tone}`} aria-live="polite" aria-label="Qué hacer ahora">
+          <div className="coach-bar-text">
+            <strong>{prompt.title}</strong>
+            <span>{prompt.text}</span>
+          </div>
+          {act && <button className="btn btn-primary btn-lg" onClick={act} disabled={saving}>{actLabel}</button>}
+        </section>
+
         <section className="stage card" aria-label="Cámara">
           <div className="stage-frame">
-            <video ref={t.videoRef} className="stage-video" playsInline muted />
+            {/* El video se procesa pero NO se muestra: el paciente ve solo su esqueleto (privacidad y menos distracción). */}
+            <video ref={t.videoRef} className="stage-video" playsInline muted aria-hidden="true" />
             <canvas ref={t.canvasRef} className="stage-canvas" />
             {!running && (
               <div className="stage-idle">
                 <p>{t.phase === "loading" ? t.message : "La cámara está apagada"}</p>
+                {t.phase !== "loading" && <p className="stage-privacy">Tu imagen nunca se muestra ni se guarda: en pantalla solo verás tu esqueleto.</p>}
                 {t.phase === "error" && <p className="stage-error" role="alert">{t.message}</p>}
               </div>
             )}
-            {running && (
+            {running && !hidden && (
               <>
                 <div className="stage-hud" aria-live="off">
                   <span className="hud-label">Flexión</span>
-                  <strong className="num">{flex == null ? "—" : `${Math.round(flex)}°`}</strong>
+                  <strong className="num">{flex == null ? "—" : `${approx ? "≈ " : ""}${Math.round(flex)}°`}</strong>
                   <small className="num">ángulo articular {t.angle == null ? "—" : `${t.angle.toFixed(0)}°`}</small>
                 </div>
                 <div className="stage-reps" aria-live="off">
                   <span className="hud-label">Repeticiones</span>
-                  <strong className="num">{t.reps}<small> / {prog.total}</small></strong>
+                  <strong className="num" key={t.reps}><span className="pop">{t.reps}</span><small> / {prog.total}</small></strong>
                 </div>
+                {t.calibrated && frac != null && (
+                  <div className={`goal-gauge ${frac >= 1 ? "is-hit" : ""}`} role="img" aria-label={`${Math.round(frac * 100)}% del camino a tu meta`}>
+                    <span className="goal-gauge-top">Meta {Math.round(plan.target_flexion)}°</span>
+                    <div className="goal-gauge-track"><i style={{ height: `${frac * 100}%` }} /></div>
+                  </div>
+                )}
               </>
+            )}
+            {count != null && count > 0 && <div className="stage-count" aria-hidden="true"><span key={count}>{count}</span></div>}
+            {hidden && (
+              <div className="stage-quality" role="status">
+                <strong>{q.headline}</strong>
+                <ul>{q.tips.map((tip) => <li key={tip}>{tip}</li>)}</ul>
+                <small>No te muestro ángulos ni cuento repeticiones hasta que la imagen sea clara.</small>
+              </div>
             )}
             {running && !t.visible && <div className="stage-alert stage-alert-view" role="status">No veo bien tu {bodyPartOf(exercise)}. Aléjate un poco y que se vea toda la extremidad.</div>}
             {running && t.visible && t.viewAdvice && <div className="stage-alert stage-alert-view" role="status">{VIEW_ADVICE_TEXT[t.viewAdvice]}</div>}
-            {running && t.visible && !t.viewAdvice && t.flags.length > 0 && <div className="stage-alert" role="status">Posible compensación: {t.flags.join(", ")}</div>}
+            {approx && t.visible && !t.viewAdvice && q.tips[0] && <div className="stage-alert stage-alert-view" role="status">{q.tips[0]}</div>}
+            {running && t.visible && !t.viewAdvice && !approx && t.flags.length > 0 && <div className="stage-alert" role="status">Posible compensación: {t.flags.join(", ")}</div>}
           </div>
-          <p className="stage-msg" role="status">{running ? t.message : "Colócate de perfil o de frente según el ejercicio, con buena luz y toda la extremidad visible."}</p>
           <div className="stage-actions">
-            {!running ? (
-              <button className="btn btn-primary btn-lg" onClick={t.start} disabled={t.phase === "loading"}>{t.phase === "loading" ? "Preparando…" : "Encender cámara"}</button>
-            ) : (
-              <>
-                <button className={`btn ${t.calibrated ? "btn-ghost" : "btn-primary"} btn-lg`} onClick={t.calibrate}>{t.calibrated ? "Recalibrar reposo" : "Calibrar reposo"}</button>
-                <button className="btn btn-ghost btn-lg" onClick={t.stop}>Apagar cámara</button>
-              </>
-            )}
+            {running && t.calibrated && <button className="btn btn-ghost" onClick={() => setCount(3)}>Recalibrar reposo</button>}
+            {running && <button className="btn btn-ghost" onClick={t.stop}>Apagar cámara</button>}
             <button className="btn btn-quiet" onClick={onBack}>Ver la demostración otra vez</button>
           </div>
         </section>
@@ -227,29 +260,27 @@ function Practice({ pid, plan, item, onSaved, onBack, debug }) {
 
       <aside className="ex-side">
         <section className="card panel session" aria-label="Tu sesión">
-          <span className="kpi-label">Serie {prog.set} de {plan.sets}</span>
+          <span className="kpi-label">Serie {Math.min(prog.set, plan.sets)} de {plan.sets}</span>
           <p className="session-count num">
             {prog.complete ? "¡Completaste todas tus series!" : `Llevas ${prog.repInSet} de ${plan.reps_per_set} en esta serie`}
           </p>
+          <div className="set-dots" aria-hidden="true">
+            {Array.from({ length: plan.reps_per_set }, (_, i) => <i key={i} className={i < prog.repInSet || prog.complete ? "on" : ""} />)}
+          </div>
           <div className="meter" role="img" aria-label={`${t.reps} de ${prog.total} repeticiones`}><span style={{ width: `${Math.min(100, (t.reps / prog.total) * 100)}%` }} /></div>
-          {resting && <p className="session-rest">Buen trabajo. Descansa un momento antes de la siguiente serie.</p>}
           <span className={`pill ${t.inTarget ? "pill-ok" : "pill-mute"}`}>{t.inTarget ? "En rango objetivo" : "En reposo"}</span>
-        </section>
-
-        <section className="card panel" aria-label="Pasos">
-          <div className="panel-head"><h2>Pasos</h2></div>
-          <ol className="checklist">
-            {checklist.map((s) => <li key={s.label} className={s.done ? "is-done" : ""}><span aria-hidden="true">{s.done ? "✓" : ""}</span>{s.label}</li>)}
-          </ol>
-        </section>
-
-        <section className="card panel">
-          <button className={`btn ${prog.complete ? "btn-primary" : "btn-ghost"} btn-lg btn-block`} onClick={finish} disabled={t.reps < 1 || saving}>{saving ? "Guardando…" : "Terminar y guardar sesión"}</button>
-          <p className="card-sub save-hint">
-            {t.reps < 1 ? "Completa al menos una repetición para poder guardar." : prog.complete ? "Ya hiciste todas tus repeticiones." : "Si lo necesitas, puedes terminar antes: se guardan las repeticiones que hiciste."}
-          </p>
           {saveError && <p className="notice notice-error" role="alert">No se pudo guardar: {saveError}. Tus repeticiones siguen aquí; intenta de nuevo.</p>}
+          {t.reps >= 1 && !prog.complete && (
+            <button className="btn btn-ghost btn-block" onClick={finish} disabled={saving}>{saving ? "Guardando…" : "Terminar antes y guardar"}</button>
+          )}
         </section>
+
+        {hidden && item && (
+          <section className="card panel guide-compare" aria-label="Compara tu postura">
+            <div className="panel-head"><h2>Compara con el muñeco</h2><p>Ponte como él y que se vea todo tu cuerpo.</p></div>
+            <DemoPanel item={item} target={plan.target_angle} showSteps={false} />
+          </section>
+        )}
 
         {item && (
           <details className="peek card panel">
@@ -289,6 +320,8 @@ function Done({ pid, overview, plan, session }) {
   const { patient, plans } = overview;
   const following = nextStep(plans, plan.plan_id); // el ejercicio que más le falta, sin contar el que acaba de hacer
   const unlocked = newAchievements(overview, plan.plan_id, session);
+  const qualityNote = sessionQualityNote(session._quality);
+  const noAngles = session._quality?.verdict === "unreliable"; // no se muestran ángulos que no podemos respaldar
   return (
     <>
       <section className="card panel done-card" aria-labelledby="h-done">
@@ -297,10 +330,11 @@ function Done({ pid, overview, plan, session }) {
         <h2 id="h-done">¡Buen trabajo, {patient.name.split(" ")[0]}!</h2>
         <div className="done-stats">
           <div><strong className="num">{session.reps_completed}</strong><span>repeticiones</span></div>
-          <div><strong className="num">{deg(session.flexion)}</strong><span>mejor flexión (meta {deg(plan.target_flexion)})</span></div>
+          <div><strong className="num">{noAngles ? "—" : deg(session.flexion)}</strong><span>mejor flexión (meta {deg(plan.target_flexion)})</span></div>
           <div><strong className="num">{session.compensation_count}</strong><span>con postura por revisar</span></div>
         </div>
-        {session.analysis && <SessionResult session={session} plan={plan} />}
+        {qualityNote && <p className="notice notice-info" role="status">{qualityNote}</p>}
+        {session.analysis && !noAngles && <SessionResult session={session} plan={plan} />}
         {unlocked.length > 0 && (
           <div className="done-ach" role="status">
             <strong>{unlocked.length === 1 ? "¡Nuevo logro!" : "¡Nuevos logros!"}</strong>

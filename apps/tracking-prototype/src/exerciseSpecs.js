@@ -45,7 +45,15 @@ export const SPECS = [
   {
     code: "shoulder_flexion", label: "Flexión de hombro (brazo al frente/arriba)", joint: "hombro", bodyPart: "hombro",
     measure: { type: "joint_angle", points: ["hip", "shoulder", "elbow"] },
-    direction: "increasing", rest: 15, target: 150, view: "front", posture: "standing",
+    // De PERFIL: al subir el brazo hacia el frente el movimiento ocurre en el plano que ve la cámara. De frente el brazo
+    // apunta a la cámara, se aplasta y el ángulo en 2D deja de ser fiable (se comprobó con video, docs/CALIDAD-DE-SENAL.md).
+    direction: "increasing", rest: 15, target: 150, view: "profile", posture: "standing",
+  },
+  {
+    // Abducción: el brazo sube HACIA EL LADO. Aquí el movimiento sí ocurre de frente a la cámara, así que se mide bien de frente.
+    code: "shoulder_abduction", label: "Abducción de hombro (brazo hacia el lado)", joint: "hombro", bodyPart: "hombro",
+    measure: { type: "joint_angle", points: ["hip", "shoulder", "elbow"] },
+    direction: "increasing", rest: 15, target: 90, view: "front", posture: "standing",
   },
   {
     // La rodilla NO se dobla en este ejercicio: se mide cuánto sube el muslo sobre la camilla. Con el motor de «flexión de

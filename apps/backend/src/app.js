@@ -5,7 +5,7 @@ import { PROFILE_COLUMNS, buildProfileUpdate } from "./profile.js";
 import { ageOn, isJpeg } from "./validators.js";
 import { AREAS, CATEGORIES, PHASES, assignedRoutines, getLibraryItem, getRoutine, listEvidence, listLibrary, listRoutines } from "./library.js";
 import { toEmbedUrl } from "./video.js";
-import { ANALYZER_VERSION, analyzeSession } from "./engine.js";
+import { ANALYZER_VERSION, ADVICE, assessReliability, analyzeSession } from "./engine.js";
 import { parseTrace } from "./trace.js";
 import { coachingFor } from "./coaching.js";
 import { registerAuth } from "./authRoutes.js";
@@ -365,6 +365,13 @@ export function createApp(db, {
   // ---- Sesiones ----------------------------------------------------------
   // El cliente (motor de tracking) envía la sesión terminada con sus repeticiones;
   // el servidor calcula los agregados para que no dependan de lo que diga el cliente.
+  // Calidad de la medición: la juzga el servidor con el registro guardado (no se fía de lo que diga el cliente).
+  const qualityOf = (exercise, trace) => {
+    const spec = exercise.spec ? JSON.parse(exercise.spec) : null;
+    const r = assessReliability(trace, { spec });
+    return JSON.stringify({ verdict: r.verdict, score: r.score, failed: r.failed, metrics: r.metrics });
+  };
+
   app.post("/patients/:id/sessions", (req, res) => {
     const patientId = toId(req.params.id);
     getPatient(patientId);
@@ -391,11 +398,13 @@ export function createApp(db, {
     // confiables de la base (ejercicio, lado, meta), no con lo que diga el cliente.
     let analysis = null;
     let storedTrace = null;
+    let quality = null;
     if (trace != null) {
       const parsed = parseTrace(trace);
       require_(!parsed.error, parsed.error);
       storedTrace = { ...parsed.trace, meta: { ...parsed.trace.meta, exercise: exercise.code, side, targetAngle: target_angle, restAngle: exercise.rest_angle, direction: exercise.direction } };
       analysis = analyzeSession(storedTrace, { expectedReps: plan ? plan.sets * plan.reps_per_set : null });
+      quality = qualityOf(exercise, storedTrace);
     }
 
     // Con registro, las repeticiones guardadas son las del análisis del SERVIDOR (una sola fuente de verdad: así las
@@ -412,10 +421,10 @@ export function createApp(db, {
     const sessionId = transaction(db, () => {
       const info = db
         .prepare(
-          `INSERT INTO sessions (patient_id, plan_id, exercise_id, side, target_angle, started_at, ended_at, reps_completed, best_rom, compensation_count, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO sessions (patient_id, plan_id, exercise_id, side, target_angle, started_at, ended_at, reps_completed, best_rom, compensation_count, notes, quality)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(patientId, plan_id ?? null, exercise.id, side, target_angle, startedUtc, endedUtc, finalReps.length, best, compensationCount, notes ?? null);
+        .run(patientId, plan_id ?? null, exercise.id, side, target_angle, startedUtc, endedUtc, finalReps.length, best, compensationCount, notes ?? null, quality);
       const sid = Number(info.lastInsertRowid);
       const insRep = db.prepare("INSERT INTO rep_records (session_id, rep_number, rom_achieved, compensation_flags) VALUES (?, ?, ?, ?)");
       finalReps.forEach((r, i) => insRep.run(sid, i + 1, r.rom_achieved, JSON.stringify(r.compensation_flags ?? [])));
@@ -439,8 +448,10 @@ export function createApp(db, {
     const reps = db.prepare("SELECT rep_number, rom_achieved, compensation_flags FROM rep_records WHERE session_id = ? ORDER BY rep_number").all(id);
     const stored = db.prepare("SELECT analyzer_version, summary, created_at FROM session_analysis WHERE session_id = ?").get(id);
     const flex = (angle) => (s.direction === "decreasing" ? 180 - angle : angle);
+    const { quality, ...rest } = s;
     return {
-      ...s,
+      ...rest,
+      quality: quality ? { ...JSON.parse(quality), advice: JSON.parse(quality).failed.map((k) => ADVICE[k]) } : null,
       has_trace: Boolean(stored),
       analysis: stored ? { ...JSON.parse(stored.summary), analyzer_version: stored.analyzer_version, analyzed_at: stored.created_at } : null,
       flexion: s.best_rom == null ? null : flex(s.best_rom),
@@ -465,6 +476,8 @@ export function createApp(db, {
     const session = loadSession(id);
     const row = db.prepare("SELECT trace FROM session_analysis WHERE session_id = ?").get(id);
     if (!row) throw new HttpError(404, "esta sesión no tiene registro para analizar");
+    const ex = db.prepare("SELECT spec FROM exercises WHERE id = ?").get(session.exercise_id);
+    db.prepare("UPDATE sessions SET quality = ? WHERE id = ?").run(qualityOf(ex, JSON.parse(row.trace)), id);
     const plan = session.plan_id ? q.planById.get(session.plan_id) : null;
     const analysis = analyzeSession(JSON.parse(row.trace), { expectedReps: plan ? plan.sets * plan.reps_per_set : null });
     db.prepare("UPDATE session_analysis SET analyzer_version = ?, summary = ?, created_at = datetime('now') WHERE session_id = ?")
@@ -479,6 +492,7 @@ export function createApp(db, {
       db
         .prepare(
           `SELECT s.id, s.started_at, s.ended_at, s.side, s.target_angle, s.reps_completed, s.best_rom, s.compensation_count,
+                  json_extract(s.quality, '$.verdict') AS quality_verdict,
                   CASE WHEN e.direction = 'decreasing' THEN 180 - s.best_rom ELSE s.best_rom END AS flexion,
                   e.code AS exercise_code, e.name AS exercise_name
              FROM sessions s JOIN exercises e ON e.id = s.exercise_id

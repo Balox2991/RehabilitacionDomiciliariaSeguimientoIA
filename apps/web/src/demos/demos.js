@@ -92,6 +92,31 @@ export const DEMOS = {
     },
   },
 
+  // Abducción: la persona se ve DE FRENTE (las dos piernas) y el brazo sube hacia el lado.
+  shoulder_abduction: {
+    title: "Elevación lateral del brazo",
+    tracked: true,
+    range: (target = 90) => [80, 90 - target],
+    frame(theta) {
+      const H = P(150, 148);
+      const S = pt(H, -90, 64);
+      const E = pt(S, theta, 40);
+      const W = pt(E, theta, 38);
+      return {
+        furniture: [line(P(30, 214), P(300, 214))],
+        bones: [
+          still(H, S), still(H, P(136, 181)), still(P(136, 181), P(134, 212)), still(H, P(164, 181)), still(P(164, 181), P(166, 212)),
+          still(S, pt(S, 100, 40)), still(pt(S, 100, 40), pt(S, 100, 78)),
+          move(S, E), move(E, W), move(W, pt(W, theta, 12)),
+        ],
+        head: pt(S, -90, 22),
+        joints: [E, W],
+        arc: { a: H, b: S, c: E },
+        label: `Hombro ${round(calculateAngle(H, S, E))}°`,
+      };
+    },
+  },
+
   // ------------------------------------------------------------------------------ pierna (con cámara: ángulo de segmento)
   straight_leg_raise: {
     title: "Elevación de pierna recta",

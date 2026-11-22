@@ -29,7 +29,9 @@ test("las indicaciones de colocación siguen la postura y la vista de cada ejerc
   const sit = setupTips(exerciseOf({ exercise_code: "knee_flexion" }));
   assert.ok(sit.some((t) => /silla/.test(t)) && sit.some((t) => /perfil/.test(t)));
   const stand = setupTips(exerciseOf({ exercise_code: "shoulder_flexion" }));
-  assert.ok(stand.some((t) => /Párate/.test(t)) && stand.some((t) => /de frente/.test(t)));
+  assert.ok(stand.some((t) => /Párate/.test(t)) && stand.some((t) => /perfil/.test(t)), "la flexión de hombro se mide de perfil");
+  const side = setupTips(exerciseOf({ exercise_code: "shoulder_abduction" }));
+  assert.ok(side.some((t) => /Párate/.test(t)) && side.some((t) => /de frente/.test(t)), "la abducción de hombro se mide de frente");
   const lie = setupTips(exerciseOf({ exercise_code: "straight_leg_raise" }));
   assert.ok(lie.some((t) => /boca arriba/.test(t)) && lie.some((t) => /de la cadera a la rodilla/.test(t)));
   for (const s of SPECS) assert.ok(setupTips(exerciseOf({ exercise_code: s.code })).length >= 4, s.code);

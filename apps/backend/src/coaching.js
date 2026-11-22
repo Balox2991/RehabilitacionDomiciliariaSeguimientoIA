@@ -45,6 +45,7 @@ export function coachingFor(db, patientId, { now, sessionId = null }) {
     `SELECT s.id, s.started_at, s.best_rom, s.reps_completed, s.compensation_count, a.summary
        FROM sessions s LEFT JOIN session_analysis a ON a.session_id = s.id
       WHERE s.patient_id = ? AND s.exercise_id = ? AND s.side = ? AND s.best_rom IS NOT NULL
+        AND COALESCE(json_extract(s.quality, '$.verdict'), 'reliable') <> 'unreliable' -- un ángulo sin respaldo no cuenta como progreso
       ORDER BY s.started_at, s.id`
   );
 

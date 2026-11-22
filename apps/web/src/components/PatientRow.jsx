@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { pctText, relativeDays } from "../lib/format.js";
+import { alertReason, needsAction, pctText, relativeDays, suggestedAction } from "../lib/format.js";
 import { PHASES } from "../lib/labels.js";
 import Avatar from "./Avatar.jsx";
+import Icon from "./Icon.jsx";
 import StatusPill from "./StatusPill.jsx";
 
 function Dots({ done, total }) {
@@ -14,18 +15,19 @@ function Dots({ done, total }) {
 
 // Una fila de paciente. TODO lo importante está visible a la vez (sin pasar el mouse ni abrir nada):
 // quién es, cómo va, qué tan reciente fue su última sesión y qué se puede hacer con un clic.
-export default function PatientRow({ p, tid }) {
+export default function PatientRow({ p, tid, index = 0 }) {
   const detail = `/fisio/${tid}/paciente/${p.id}`;
   const phase = p.recovery_phase ? PHASES[p.recovery_phase].label : null;
   const meta = [p.fracture_site, p.diagnosis_code, p.days_since_injury != null && `día ${p.days_since_injury}`].filter(Boolean).join(" · ");
   return (
-    <li className="prow">
+    <li className="prow" style={{ "--i": Math.min(index, 8) }}>
       <div className="prow-id">
         <Avatar patient={p} size="md" />
         <div className="prow-id-text">
           <Link to={detail} className="prow-name">{p.name}</Link>
           <span className="prow-meta">{meta || "Sin lesión registrada"}</span>
           {phase && <span className="prow-phase">Etapa: {phase}</span>}
+          {needsAction(p.status) && <span className="prow-todo"><Icon name="arrow" size={13} /> {alertReason(p) || suggestedAction(p.status)}</span>}
         </div>
       </div>
 

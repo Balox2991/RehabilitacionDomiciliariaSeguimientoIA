@@ -5,6 +5,8 @@ import { CompensationDetector } from "@engine/compensation.js";
 import { PoseTracker } from "@engine/poseTracker.js";
 import { TraceRecorder } from "@engine/traceRecorder.js";
 import { estimateView, viewAdvice as adviceFor } from "@engine/viewCheck.js";
+import { assessRecent } from "@engine/reliability.js";
+import { qualityView, smoothMode } from "../lib/quality.js";
 
 // Conecta la cámara + MediaPipe con el motor de la Fase 1 (angleMath, repCounter, compensation).
 // Este hook orquesta; la lógica de negocio sigue viviendo en el motor, que está probado por separado.
@@ -32,7 +34,11 @@ export function useTracking({ exercise, side, targetAngle }) {
   const [visible, setVisible] = useState(true); // ¿se ve bien la articulación que se mide?
   const [model, setModel] = useState(null); // variante del modelo cargada ("full" | "lite")
   const [viewAdvice, setViewAdvice] = useState(null); // «turn_profile» | «turn_front» | null: la persona no está como pide el ejercicio
-  const lastUi = useRef({ angleAt: 0, flagsKey: "", seen: true, viewTick: 0, advice: null });
+  const lastUi = useRef({ angleAt: 0, flagsKey: "", seen: true, viewTick: 0, advice: null, qualityAt: 0 });
+  // Calidad de la medición (guardián): si no es fiable no se muestran ángulos ni se cuentan repeticiones (ver lib/quality.js).
+  const [quality, setQuality] = useState({ mode: "ok", headline: null, tips: [] });
+  const qualityMemo = useRef({ mode: "ok", pending: null, count: 0 });
+  const qualityShown = useRef({ mode: "ok", headline: null, tips: [] });
 
   const stop = useCallback(() => {
     const l = live.current;
@@ -86,7 +92,19 @@ export function useTracking({ exercise, side, targetAngle }) {
       // Se registran TODOS los cuadros con persona (también los de visibilidad baja): el análisis posterior los descarta
       // por su cuenta y así puede decir qué porcentaje de la sesión se vio bien.
       if (Number.isFinite(measured)) e.recorder?.addSample(ts, measured, visibility, landmarks);
-      if (seen) {
+      // Cada segundo se juzga cómo va la medición en los últimos segundos. Si cambia de modo dos veces seguidas, se actualiza.
+      if (ts - lastUi.current.qualityAt > 1000) {
+        lastUi.current.qualityAt = ts;
+        const trace = e.recorder?.build();
+        const next = qualityView(trace ? assessRecent(trace, exercise) : null);
+        qualityMemo.current = smoothMode(qualityMemo.current, next.mode);
+        if (qualityMemo.current.mode === next.mode) {
+          const prev = qualityShown.current;
+          if (prev.mode !== next.mode || prev.tips.join("|") !== next.tips.join("|")) { qualityShown.current = next; setQuality(next); }
+        }
+      }
+      // Con la medición no fiable NO se cuentan repeticiones: contar con ángulos inventados es peor que no contar.
+      if (seen && qualityMemo.current.mode !== "hidden") {
         const out = e.counter.update(measured, ts);
         nextAngle = out.angle; // el ángulo SUAVIZADO: el número en pantalla deja de temblar
         setInTarget(out.inTarget);
@@ -136,6 +154,10 @@ export function useTracking({ exercise, side, targetAngle }) {
       engine.current.records = [];
       lastUi.current.seen = true;
       lastUi.current.advice = null;
+      lastUi.current.qualityAt = 0;
+      qualityMemo.current = { mode: "ok", pending: null, count: 0 };
+      qualityShown.current = { mode: "ok", headline: null, tips: [] };
+      setQuality(qualityShown.current);
       setViewAdvice(null);
       setVisible(true);
       engine.current.startedAt = new Date();
@@ -190,5 +212,5 @@ export function useTracking({ exercise, side, targetAngle }) {
     [buildTrace]
   );
 
-  return { videoRef, canvasRef, phase, message, angle, reps, inTarget, flags, calibrated, visible, viewAdvice, model, start, stop, calibrate, snapshot, buildTrace, exportTrace };
+  return { videoRef, canvasRef, phase, message, angle, reps, inTarget, flags, calibrated, visible, viewAdvice, quality, model, start, stop, calibrate, snapshot, buildTrace, exportTrace };
 }

@@ -27,10 +27,15 @@ function Evidence({ items }) {
 
 // Recomendaciones del asistente para el PACIENTE, de UN plan: salen del análisis del video de su sesión, de su historial y
 // de su plan. Cada una explica por qué («¿Por qué te lo digo?») con sus propios números y, si aplica, cita el estudio.
-export default function CoachCard({ plan, evidence = [], pid, libraryCode = null, title = "Tu asistente de recuperación" }) {
+export default function CoachCard({ plan, evidence = [], pid, libraryCode = null, title = "Tu asistente de recuperación", compact = false }) {
   const groups = GROUPS.map(([key, label]) => [key, label, plan.patient[key]]).filter(([, , list]) => list.length > 0);
   if (groups.length === 0) return null;
   const byCode = Object.fromEntries(evidence.map((e) => [e.code, e]));
+  // Modo compacto: solo LA recomendación más importante (cuidado > enfoque > logro); el resto queda plegado.
+  const order = ["care", "focus", "highlights"];
+  const topKey = order.find((k) => plan.patient[k].length > 0);
+  const shown = compact ? groups.filter(([k]) => k === topKey).map(([k, l, list]) => [k, l, list.slice(0, 1)]) : groups;
+  const hiddenCount = groups.reduce((n, [, , list]) => n + list.length, 0) - shown.reduce((n, [, , list]) => n + list.length, 0);
   return (
     <section className="card panel coach" aria-labelledby={`h-coach-${plan.plan_id}`}>
       <div className="panel-head">
@@ -38,7 +43,7 @@ export default function CoachCard({ plan, evidence = [], pid, libraryCode = null
         <p>{plan.exercise_name} · hecho con tus datos y el análisis de tu video.</p>
       </div>
       <div className="coach-groups">
-        {groups.map(([key, label, list]) => (
+        {shown.map(([key, label, list]) => (
           <div key={key} className="coach-group">
             <h3>{label}</h3>
             <ul>
@@ -66,6 +71,12 @@ export default function CoachCard({ plan, evidence = [], pid, libraryCode = null
           </div>
         ))}
       </div>
+      {compact && hiddenCount > 0 && (
+        <details className="coach-more">
+          <summary>Ver {hiddenCount} {hiddenCount === 1 ? "recomendación más" : "recomendaciones más"}</summary>
+          <CoachCard plan={plan} evidence={evidence} pid={pid} libraryCode={libraryCode} title={title} />
+        </details>
+      )}
       <p className="coach-note">Orientación general con tus datos. No reemplaza a tu fisioterapeuta: si algo te duele o te preocupa, avísale.</p>
     </section>
   );

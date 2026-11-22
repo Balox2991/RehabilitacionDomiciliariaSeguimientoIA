@@ -14,6 +14,7 @@ const MIGRATIONS = [
   { version: 4, name: "análisis posterior de cada sesión", file: "004_session_analysis.sql" },
   { version: 5, name: "especificación de cada ejercicio", file: "005_exercise_specs.sql" },
   { version: 6, name: "cuentas, sesiones, bloqueo y auditoría", file: "006_auth.sql" },
+  { version: 7, name: "calidad de la medición de cada sesión", file: "007_session_quality.sql" },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.at(-1).version;

@@ -291,3 +291,103 @@ body:has(.area-patient) { background: var(--bg-warm); }
 .engine-option input, .engine-consent input { margin-top: 3px; }
 .engine-option.is-disabled { opacity: 0.55; cursor: not-allowed; }
 .engine-consent { background: var(--surface-2, #f3f6f8); border-radius: 8px; padding: 10px 12px; }
+
+/* Guardián de calidad: cuando la medición no es fiable no se muestran ángulos; en su lugar, consejo y guía para comparar. */
+.stage-quality { position: absolute; left: 14px; right: 14px; top: 14px; background: rgba(8, 44, 76, 0.9); color: #fff; padding: 14px 18px; border-radius: var(--r-md); display: grid; gap: 8px; backdrop-filter: blur(4px); }
+.stage-quality strong { font-family: var(--font-display); font-size: 20px; font-weight: 800; line-height: 1.15; }
+.stage-quality ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 15px; }
+.stage-quality small { opacity: 0.8; font-size: 13px; }
+.guide-compare .panel-head p { margin: 0; }
+@media (max-width: 640px) { .stage-quality { left: 8px; right: 8px; top: 8px; padding: 10px 12px; } .stage-quality strong { font-size: 17px; } }
+
+/* ---- Rediseño del inicio: menos tarjetas, más aire y un poco de movimiento ---- */
+.safety-strip { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 10px 14px; border-radius: var(--r-md); background: var(--warn-bg); color: #6b4509; font-size: 0.9rem; line-height: 1.4; }
+.safety-strip svg { flex: none; margin-top: 2px; }
+.safety-strip a { color: inherit; font-weight: 600; white-space: nowrap; }
+.more-card { padding: 0; }
+.more-card > summary { cursor: pointer; padding: 14px 18px; font-weight: 700; color: var(--navy-900); list-style: none; display: flex; align-items: center; gap: 8px; }
+.more-card > summary::-webkit-details-marker { display: none; }
+.more-card > summary::after { content: "+"; margin-left: auto; font-size: 1.2rem; color: var(--ink-3); }
+.more-card[open] > summary::after { content: "–"; }
+.more-card > :not(summary) { padding: 0 18px 18px; }
+.coach-more { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.coach-more > summary { cursor: pointer; color: var(--blue-600); font-weight: 600; font-size: 0.9rem; }
+.coach-more .coach { box-shadow: none; border: 0; padding: 8px 0 0; }
+.home-main > *, .home-side > * { animation: rise .45s ease both; }
+.home-main > *:nth-child(2), .home-side > *:nth-child(1) { animation-delay: .06s; }
+.home-main > *:nth-child(3), .home-side > *:nth-child(2) { animation-delay: .12s; }
+.home-main > *:nth-child(n+4) { animation-delay: .18s; }
+.today { transition: box-shadow .2s ease, transform .2s ease; }
+.today:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.btn-primary.btn-lg { transition: transform .15s ease, box-shadow .15s ease; }
+.btn-primary.btn-lg:hover { transform: translateY(-1px); }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .home-main > *, .home-side > * { animation: none; }
+  .today, .today:hover, .btn-primary.btn-lg:hover { transition: none; transform: none; }
+}
+
+/* ---- Pantalla de ejercicio interactiva: barra de acción, cuenta regresiva, termómetro de meta ---- */
+.coach-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap; padding: 16px 20px; border-radius: var(--r-lg); background: var(--info-bg); border: 1px solid #cfe0f3; transition: background .3s ease, border-color .3s ease; }
+.coach-bar-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.coach-bar-text strong { font-family: var(--font-display); font-size: clamp(18px, 2.4vw, 24px); font-weight: 800; color: var(--navy-900); }
+.coach-bar-text span { color: var(--ink-2); font-size: 15px; }
+.coach-bar.is-go { background: var(--ok-bg); border-color: #bfe3cb; }
+.coach-bar.is-done { background: var(--ok); border-color: var(--ok); }
+.coach-bar.is-done .coach-bar-text strong, .coach-bar.is-done .coach-bar-text span { color: #fff; }
+.coach-bar.is-done .btn-primary { background: #fff; color: var(--ok); box-shadow: none; }
+.coach-bar.is-warn { background: var(--warn-bg); border-color: #ecd29b; }
+.coach-bar.is-rest { background: #eef0fb; border-color: #d3d8f2; }
+.coach-bar.is-idle { background: var(--surface); border-color: var(--line); }
+@media (max-width: 640px) { .coach-bar .btn { width: 100%; } }
+
+.stage-count { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(8, 44, 76, 0.45); pointer-events: none; }
+.stage-count span { font-family: var(--font-display); font-weight: 800; font-size: clamp(96px, 22vw, 180px); color: #fff; text-shadow: 0 6px 30px rgba(0,0,0,.4); animation: countpop 1s ease both; }
+@keyframes countpop { 0% { opacity: 0; transform: scale(1.5); } 25% { opacity: 1; transform: scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: scale(.9); } }
+
+.pop { display: inline-block; animation: pop .35s ease both; }
+@keyframes pop { 0% { transform: scale(1.6); color: #9fe7c8; } 100% { transform: scale(1); } }
+
+.goal-gauge { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: grid; justify-items: center; gap: 6px; padding: 10px 8px; border-radius: 999px; background: rgba(8, 44, 76, 0.75); color: #fff; backdrop-filter: blur(4px); }
+.goal-gauge-top { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #9fd0e6; }
+.goal-gauge-track { position: relative; width: 14px; height: 140px; border-radius: 999px; background: rgba(255,255,255,.2); overflow: hidden; display: flex; align-items: flex-end; }
+.goal-gauge-track i { display: block; width: 100%; border-radius: inherit; background: linear-gradient(0deg, #4bb0e8, #2fbf9c); transition: height .12s linear; }
+.goal-gauge.is-hit .goal-gauge-track i { background: #5be29a; box-shadow: 0 0 14px #5be29a; }
+.goal-gauge.is-hit { animation: hit .5s ease; }
+@keyframes hit { 50% { transform: translateY(-50%) scale(1.12); } }
+@media (max-width: 640px) { .goal-gauge { right: 8px; padding: 8px 6px; } .goal-gauge-track { height: 96px; } }
+
+.set-dots { display: flex; flex-wrap: wrap; gap: 6px; }
+.set-dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line-strong); transition: background .25s ease, border-color .25s ease, transform .25s ease; }
+.set-dots i.on { background: var(--ok); border-color: var(--ok); transform: scale(1.1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-count span, .pop, .goal-gauge.is-hit { animation: none; }
+  .goal-gauge-track i, .set-dots i, .coach-bar { transition: none; }
+}
+
+/* ---- Progreso interactivo ---- */
+.prog-filter { margin-bottom: 16px; }
+.sess { padding: 0; display: block; }
+.sess-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 14px 6px; background: none; border: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; border-radius: var(--r-sm); transition: background .15s ease; }
+.sess-btn:hover { background: var(--surface-2); }
+.sess-btn:focus-visible { outline: 3px solid var(--coral-500); outline-offset: 2px; }
+.sess-chev { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-2); color: var(--ink-2); font-weight: 800; }
+.sess:first-child .sess-btn, .sess:last-child .sess-btn { padding-top: 14px; padding-bottom: 14px; }
+.sess-detail { padding: 4px 6px 16px; display: grid; gap: 10px; animation: rise .25s ease both; }
+.rep-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.rep-chips li { display: grid; gap: 0; justify-items: center; min-width: 52px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--ok-bg); }
+.rep-chips li.has-flag { background: var(--warn-bg); }
+.rep-chips small { color: var(--ink-3); font-size: 11.5px; }
+.rep-chips strong { font-family: var(--font-display); color: var(--navy-900); }
+.prog-hero { animation: rise .35s ease both; }
+@media (prefers-reduced-motion: reduce) { .sess-detail, .prog-hero { animation: none; } .sess-btn { transition: none; } }
+
+/* Celular: la barra de abajo es fija; sin este margen tapaba el pie de página. */
+@media (max-width: 720px) {
+  .patient-nav ~ .footer, .footer { padding-bottom: 72px; }
+}
+
+/* Privacidad: la cámara mide pero no se enseña. Solo se dibuja el esqueleto sobre fondo oscuro. */
+.stage-video { opacity: 0; pointer-events: none; }
+.stage-privacy { font-size: 13px; font-weight: 500; color: #9fb6c9; max-width: 34ch; margin-inline: auto; }

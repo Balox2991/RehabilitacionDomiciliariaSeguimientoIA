@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api.js";
 import { useAsync } from "../../lib/useAsync.js";
 import { alertReason, deg, formatDay, formatTime, pctText, relativeDays, sideLabel, statusHeadline, suggestedAction } from "../../lib/format.js";
@@ -34,12 +34,29 @@ function StatusCard({ summary }) {
   );
 }
 
+// ¿Se puede fiar de los ángulos de las últimas sesiones? Solo aparece si alguna medición quedó dudosa o no fiable.
+function QualityCard({ pid, tid }) {
+  const { data } = useAsync(() => api.sessions(pid), [pid]);
+  const recent = (data ?? []).filter((s) => s.quality_verdict).slice(0, 10);
+  const bad = recent.filter((s) => s.quality_verdict === "unreliable").length;
+  const doubtful = recent.filter((s) => s.quality_verdict === "uncertain").length;
+  if (bad + doubtful === 0) return null;
+  return (
+    <section className="card panel quality-card" aria-labelledby="h-calidad">
+      <div className="panel-head"><div><h2 id="h-calidad"><Icon name="alert" size={18} /> Mediciones por revisar</h2>
+        <p>De sus últimas {recent.length} sesiones con registro: {bad > 0 && <strong>{bad} no {bad === 1 ? "fiable" : "fiables"}</strong>}{bad > 0 && doubtful > 0 && " y "}{doubtful > 0 && <strong>{doubtful} aproximada{doubtful === 1 ? "" : "s"}</strong>}. Los ángulos de las no fiables no cuentan para el asistente.</p></div></div>
+      <Link to={`/fisio/${tid}/paciente/${pid}/sesiones?calidad=1`} className="link-arrow">Ver esas sesiones <Icon name="arrow" size={16} /></Link>
+    </section>
+  );
+}
+
 export function SummaryTab() {
   const { data, tid, pid, reload } = useOutletContext();
   const { assigned } = data.routines;
   return (
     <div className="tab-body">
       <StatusCard summary={data.summary} />
+      <QualityCard pid={pid} tid={tid} />
       <CoachSuggestions pid={pid} tid={tid} onApplied={reload} />
       <StatsRow data={data} />
       <div className="pp-grid">
@@ -78,6 +95,8 @@ export function SessionsTab() {
   const { data, error, loading, reload } = useAsync(() => api.sessions(pid), [pid]);
   const [open, setOpen] = useState(null);
   const [details, setDetails] = useState({});
+  const [params] = useSearchParams();
+  const [onlyDoubtful, setOnlyDoubtful] = useState(params.get("calidad") === "1"); // «solo mediciones por revisar»
   const panel = useRef(null);
 
   if (loading) return <Loading rows={2} />;
@@ -98,6 +117,8 @@ export function SessionsTab() {
     }
   }
 
+  const doubtfulCount = data.filter((s) => s.quality_verdict === "unreliable" || s.quality_verdict === "uncertain").length;
+  const rows = onlyDoubtful ? data.filter((s) => s.quality_verdict === "unreliable" || s.quality_verdict === "uncertain") : data;
   const selected = data.find((s) => s.id === open);
   const detail = open == null ? null : details[open];
 
@@ -107,21 +128,27 @@ export function SessionsTab() {
         <div className="card-pad">
           <h2 className="card-title">Historial de sesiones</h2>
           <p className="card-sub">{data.length} sesiones registradas. Abre una para ver su análisis: repeticiones, ritmo, observaciones y el movimiento.</p>
+          {doubtfulCount > 0 && (
+            <div className="chips" role="group" aria-label="Filtrar sesiones">
+              <button className={`chip ${!onlyDoubtful ? "is-on" : ""}`} aria-pressed={!onlyDoubtful} onClick={() => setOnlyDoubtful(false)}>Todas <span className="num">{data.length}</span></button>
+              <button className={`chip ${onlyDoubtful ? "is-on" : ""}`} aria-pressed={onlyDoubtful} onClick={() => setOnlyDoubtful(true)}>Medición por revisar <span className="num">{doubtfulCount}</span></button>
+            </div>
+          )}
         </div>
         {data.length === 0 ? (
           <p className="card-pad card-sub">Este paciente todavía no tiene sesiones.</p>
         ) : (
           <div className="table-wrap">
-            <table className="tbl">
+            <table className="tbl tbl-sessions">
               <thead><tr><th>Fecha</th><th>Ejercicio</th><th>Repeticiones</th><th>Mejor flexión</th><th>Con alerta</th><th><span className="sr-only">Detalle</span></th></tr></thead>
               <tbody>
-                {data.map((s) => (
+                {rows.map((s) => (
                   <tr key={s.id} className={open === s.id ? "is-selected" : ""}>
-                    <td>{formatDay(s.started_at)} <small className="cell-sub">{formatTime(s.started_at)}</small></td>
-                    <td>{s.exercise_name}<small className="cell-sub">{sideLabel(s.side)}</small></td>
-                    <td className="num">{s.reps_completed}</td>
-                    <td className="num"><strong>{deg(s.flexion)}</strong></td>
-                    <td>{s.compensation_count > 0 ? <span className="pill pill-warn">{s.compensation_count}</span> : <span className="cell-mute">—</span>}</td>
+                    <td data-label="Fecha">{formatDay(s.started_at)} <small className="cell-sub">{formatTime(s.started_at)}</small></td>
+                    <td data-label="Ejercicio">{s.exercise_name}<small className="cell-sub">{sideLabel(s.side)}</small></td>
+                    <td className="num" data-label="Repeticiones">{s.reps_completed}</td>
+                    <td className="num" data-label="Mejor flexión"><strong>{deg(s.flexion)}</strong>{s.quality_verdict === "unreliable" && <span className="pill pill-warn" title="La cámara no midió con seguridad esta sesión">No fiable</span>}{s.quality_verdict === "uncertain" && <span className="pill" title="Medición aproximada">≈</span>}</td>
+                    <td data-label="Con alerta">{s.compensation_count > 0 ? <span className="pill pill-warn">{s.compensation_count}</span> : <span className="cell-mute">—</span>}</td>
                     <td><button className="btn btn-ghost btn-sm" onClick={() => toggle(s.id)} aria-expanded={open === s.id} aria-controls="analisis-sesion">{open === s.id ? "Ocultar" : "Ver análisis"}</button></td>
                   </tr>
                 ))}

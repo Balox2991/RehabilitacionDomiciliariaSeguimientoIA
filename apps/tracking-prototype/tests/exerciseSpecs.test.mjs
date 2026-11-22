@@ -17,7 +17,7 @@ const good = (over = {}) => ({ ...SPEC_BY_CODE.knee_flexion, ...over });
 
 test("el catálogo de ejercicios del motor sale de las especificaciones (no hay una segunda lista)", () => {
   assert.deepEqual(Object.keys(EXERCISES), SPECS.map((s) => s.code));
-  assert.deepEqual(Object.keys(EXERCISES), ["knee_flexion", "elbow_flexion", "shoulder_flexion", "straight_leg_raise"]);
+  assert.deepEqual(Object.keys(EXERCISES), ["knee_flexion", "elbow_flexion", "shoulder_flexion", "shoulder_abduction", "straight_leg_raise"]);
   for (const s of SPECS) assert.equal(validateSpec(s).error, undefined, `${s.code}: ${validateSpec(s).error}`);
 });
 

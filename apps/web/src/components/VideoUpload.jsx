@@ -4,6 +4,7 @@ import { bodyPartOf } from "../lib/exercise.js";
 import { saveSessionSafely } from "../lib/saveSession.js";
 import { buildSessionPayload } from "../lib/sessionPayload.js";
 import { MAX_VIDEO_SECONDS, VideoError, analyzeVideoFile } from "../tracking/videoAnalysis.js";
+import { assessReliability } from "@engine/reliability.js";
 import Icon from "./Icon.jsx";
 
 const MIN_SEEN = 0.25; // fracción mínima de cuadros donde se vio la articulación
@@ -54,6 +55,11 @@ export default function VideoUpload({ pid, plan, exercise, onSaved, onBack }) {
       if (r.total === 0 || r.seen / r.total < MIN_SEEN) {
         throw new VideoError(`No pudimos ver tu ${bodyPartOf(exercise)} en el video. Graba de perfil, de cuerpo completo y con buena luz, y vuelve a intentarlo.`);
       }
+      // Guardián de calidad: si el video no permite una medición fiable, no se guardan ángulos inventados: se dice qué mejorar.
+      const quality = assessReliability(r.trace, exercise);
+      if (quality.verdict === "unreliable") {
+        throw new VideoError(`No pudimos medirte con seguridad en este video. ${quality.advice.slice(0, 2).join(" ")} Graba otro video y vuelve a intentarlo.`);
+      }
       const end = new Date();
       const { body, analysis } = buildSessionPayload({
         plan, snap: { started_at: new Date(end.getTime() - r.seconds * 1000), ended_at: end, reps: [] }, trace: r.trace,
@@ -62,7 +68,7 @@ export default function VideoUpload({ pid, plan, exercise, onSaved, onBack }) {
         throw new VideoError("No detectamos repeticiones en el video. Haz el movimiento completo (de reposo hasta lo más lejos que llegues y de vuelta) y que se vea toda la extremidad.");
       }
       setState({ status: "working", progress: 1, message: "Guardando tu sesión…" });
-      onSaved(await saveSessionSafely(pid, body));
+      onSaved({ ...(await saveSessionSafely(pid, body)), _quality: quality });
     } catch (err) {
       setState({ status: "error", progress: 0, message: err instanceof VideoError ? err.message : `No se pudo analizar el video: ${err?.message ?? err}` });
     }

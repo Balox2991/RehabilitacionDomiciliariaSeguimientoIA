@@ -6,3 +6,4 @@ export { SPECS, validateSpec } from "../../tracking-prototype/src/exerciseSpecs.
 export { COACH, coach } from "../../tracking-prototype/src/coach.js";
 export { EXERCISES } from "../../tracking-prototype/src/angleMath.js";
 export { runPosePass } from "../../tracking-prototype/src/videoPass.js";
+export { ADVICE, assessReliability } from "../../tracking-prototype/src/reliability.js";

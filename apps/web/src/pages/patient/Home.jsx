@@ -103,7 +103,7 @@ function WeekCard({ pid, plans, days }) {
         {planned > 0 && <span className="week-count num">{done} de {planned} sesiones</span>}
       </div>
       <WeekStrip days={days} />
-      {plans.length > 0 && (
+      {plans.length > 1 && (
         <ul className="mp-list">
           {plans.map((p) => {
             const complete = sessionsLeft(p) === 0;
@@ -139,6 +139,17 @@ function GoalCard({ pid, plans, avg }) {
       {plans.length > 0 && <div className="goal-list">{plans.map((p) => <Journey key={p.plan_id} plan={p} compact />)}</div>}
       <Link to={`/paciente/${pid}/progreso`} className="link-arrow">Ver mi progreso completo <Icon name="arrow" size={16} /></Link>
     </section>
+  );
+}
+
+// Aviso de seguridad en UNA línea (siempre visible, sin ocupar una tarjeta entera).
+function SafetyStrip({ pid }) {
+  return (
+    <p className="safety-strip" role="note">
+      <Icon name="alert" size={16} />
+      <span><strong>Si el dolor aumenta o notas hinchazón, hormigueo o fiebre, para y avisa.</strong>{" "}
+        <Link to={`/paciente/${pid}/aprender/edu_pain_swelling`}>Ver señales de alerta</Link></span>
+    </p>
   );
 }
 
@@ -181,8 +192,9 @@ export default function Home() {
         <div className="home-grid">
           <div className="home-main">
             <Today pid={pid} state={state} step={step} doneAlready={doneToday(days)} />
+            <SafetyStrip pid={pid} />
             {(coach.data?.plans ?? []).filter((c) => c.session_id).slice(0, 2).map((c) => (
-              <CoachCard key={c.plan_id} plan={c} evidence={coach.data.evidence} pid={pid} libraryCode={c.library_code} />
+              <CoachCard key={c.plan_id} plan={c} evidence={coach.data.evidence} pid={pid} libraryCode={c.library_code} compact />
             ))}
             <WeekCard pid={pid} plans={plans} days={days} />
             {suggested.length > 0 && (
@@ -199,8 +211,10 @@ export default function Home() {
           </div>
           <aside className="home-side">
             <GoalCard pid={pid} plans={plans} avg={avg} />
-            <Achievements data={data} compact />
-            <SafetyCard pid={pid} />
+            <details className="more-card card">
+              <summary><Icon name="star" size={16} /> Tus logros</summary>
+              <Achievements data={data} compact />
+            </details>
           </aside>
         </div>
         <Disclaimer />

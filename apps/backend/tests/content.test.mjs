@@ -375,7 +375,7 @@ test("el catálogo de ejercicios se actualiza desde las especificaciones sin per
     assert.equal(row.id, id, "el id no cambia (los planes lo referencian)");
     assert.equal(row.name, "Flexión de rodilla");
     assert.equal(JSON.parse(row.spec).measure.type, "joint_angle");
-    assert.equal(b.prepare("SELECT COUNT(*) n FROM exercises").get().n, 4);
+    assert.equal(b.prepare("SELECT COUNT(*) n FROM exercises").get().n, 5);
     b.close();
   } finally {
     rmSync(dir, { recursive: true, force: true });
