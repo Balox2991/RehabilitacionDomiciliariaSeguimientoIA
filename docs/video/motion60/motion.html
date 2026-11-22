@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Clínica Ocaña · motion</title>
+<style>
+:root{--teal:#2dd4bf;--teal2:#14b8a6;--amber:#fbbf24;--navy:#0b2540;--navy2:#06182a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#06182a;color:#fff;font-family:"Segoe UI","Segoe UI Variable",system-ui,sans-serif}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;background:linear-gradient(135deg,#0e3050 0%,#071c31 62%,#05131f 100%)}
+.blob{position:absolute;width:1000px;height:1000px;border-radius:50%;left:0;top:0;will-change:transform}
+#b1{background:radial-gradient(circle,rgba(45,212,191,.30),transparent 62%)}
+#b2{background:radial-gradient(circle,rgba(56,130,246,.30),transparent 62%)}
+#b3{background:radial-gradient(circle,rgba(251,191,36,.12),transparent 62%)}
+#grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:90px 90px}
+.scene{position:absolute;left:0;top:0;width:1920px;height:1080px;display:none}
+.w{display:inline-block;overflow:hidden;padding-bottom:.14em;margin-bottom:-.14em;vertical-align:top}
+.w i{display:block;font-style:normal;will-change:transform}
+.kick{position:absolute;left:112px;top:60px;font-size:26px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--teal)}
+.ttl{position:absolute;left:108px;top:98px;font-size:88px;font-weight:800;line-height:1.08;letter-spacing:-.02em;white-space:nowrap}
+.persp{position:absolute;left:340px;top:262px;width:1240px;height:731px;perspective:2000px}
+.win{width:1240px;height:731px;border-radius:22px;overflow:hidden;background:#fff;box-shadow:0 60px 140px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.14),0 0 120px rgba(45,212,191,.18);transform-origin:50% 100%}
+.bar3{height:34px;background:#e6ecf2;display:flex;align-items:center;padding:0 14px;gap:8px}
+.bar3 b{width:12px;height:12px;border-radius:50%;background:#ff6159}.bar3 b:nth-child(2){background:#ffbd2e}.bar3 b:nth-child(3){background:#28c940}
+.bar3 span{margin-left:18px;font-size:14px;color:#6b7b8a;background:#fff;border-radius:999px;padding:3px 22px}
+.shot{display:block;width:1240px;height:697px;background:#fff}
+.chip{position:absolute;display:flex;align-items:center;gap:14px;padding:14px 30px 14px 14px;border-radius:999px;background:rgba(8,28,48,.92);border:2px solid rgba(45,212,191,.6);font-size:32px;font-weight:700;box-shadow:0 20px 56px rgba(0,0,0,.5);white-space:nowrap;opacity:0}
+.chip .ic{width:48px;height:48px;border-radius:50%;background:var(--teal);color:#06182a;display:grid;place-items:center;font-size:28px;font-weight:900}
+.chip.warn{border-color:rgba(251,191,36,.7)}.chip.warn .ic{background:var(--amber)}
+#brand{position:absolute;right:70px;top:62px;display:flex;align-items:center;gap:14px;font-size:30px;font-weight:700;opacity:0}
+#brand svg{width:46px;height:46px}
+.hook{position:absolute;left:112px;top:250px;width:900px;font-size:110px;font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.hook .acc{color:var(--teal)}
+.big{position:absolute;left:0;width:1920px;text-align:center}
+.mark{position:absolute;left:810px;top:150px;width:300px;height:300px}
+.name{position:absolute;left:0;width:1920px;top:500px;text-align:center;font-size:170px;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
+.name span{display:inline-block}
+.sub{position:absolute;left:0;width:1920px;top:726px;text-align:center;font-size:50px;font-weight:500;color:#bfe9e3}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--teal)}
+.card{position:absolute;top:360px;width:322px;height:420px;border-radius:30px;padding:36px 30px;background:linear-gradient(160deg,rgba(255,255,255,.13),rgba(255,255,255,.05));border:2px solid rgba(255,255,255,.2);box-shadow:0 30px 80px rgba(0,0,0,.45);opacity:0}
+.card .num{font-size:130px;font-weight:900;line-height:1;color:transparent;-webkit-text-stroke:3px var(--teal)}
+.card h3{font-size:40px;font-weight:800;line-height:1.15;margin-top:28px}
+.card p{font-size:26px;color:#a9c3d6;margin-top:14px;line-height:1.3}
+.phone{position:absolute;left:1190px;top:80px;width:443px;height:916px;border-radius:70px;background:#0a1620;padding:18px;box-shadow:0 60px 140px rgba(0,0,0,.6),0 0 0 3px #28465f,0 0 140px rgba(45,212,191,.25)}
+.phone img{display:block;width:407px;height:880px;border-radius:54px;background:#fff}
+.phone .notch{position:absolute;left:50%;top:26px;width:120px;height:32px;margin-left:-60px;border-radius:20px;background:#0a1620;z-index:3}
+.wp{position:absolute;top:-200px;height:1480px;width:2600px;left:0;transform:translateX(-4000px) skewX(-14deg);will-change:transform}
+#wp1{background:linear-gradient(90deg,#14b8a6,#2dd4bf)}
+#wp2{background:#f4fbfa}
+.foot{position:absolute;left:0;width:1920px;top:985px;text-align:center;font-size:25px;color:#8fb0c4;letter-spacing:.04em}
+.pill{position:absolute;left:0;width:1920px;top:850px;display:flex;justify-content:center}
+.pill div{padding:20px 46px;border-radius:999px;background:var(--teal);color:#06182a;font-size:42px;font-weight:800;box-shadow:0 20px 60px rgba(45,212,191,.35);opacity:0}
+.chart{position:absolute;left:1340px;top:735px;width:460px;height:250px;border-radius:26px;background:rgba(8,28,48,.94);border:2px solid rgba(45,212,191,.6);box-shadow:0 20px 56px rgba(0,0,0,.5);opacity:0}
+</style></head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div>
+  <div id="grid"></div>
+  <div id="scenes"></div>
+  <div id="brand"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#2dd4bf"/><rect x="42" y="20" width="16" height="60" rx="8" fill="#06182a"/><rect x="20" y="42" width="60" height="16" rx="8" fill="#06182a"/></svg>Clínica Ocaña</div>
+  <div class="wp" id="wp2"></div><div class="wp" id="wp1"></div>
+</div>
+<script src="timeline.js"></script>
+<script>
+const TL = window.TL;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const E = {
+  out: x => 1 - Math.pow(1 - x, 3),
+  back: x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); },
+  io: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2,
+  lin: x => x,
+};
+const seg = (t, a, b, e = E.out) => e(clamp((t - a) / (b - a)));
+const $ = (s, r = document) => r.querySelector(s);
+const words = (txt, cls = "") => txt.split(" ").map(w => `<span class="w"><i class="${cls}">${w}</i></span>`).join(" ");
+const reveal = (i, p) => { i.style.transform = `translateY(${(1 - p) * 140}%)`; };
+const MARK = `<svg viewBox="0 0 100 100" width="100%" height="100%"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#0d9488"/></linearGradient></defs><circle cx="50" cy="50" r="48" fill="#2dd4bf"/><g class="cross"><rect x="42" y="20" width="16" height="60" rx="8" fill="#06182a"/><rect x="20" y="42" width="60" height="16" rx="8" fill="#06182a"/></g></svg>`;
+
+const S = {};            // escenas por id
+const root = $("#scenes");
+const mk = (id, html) => { const el = document.createElement("div"); el.className = "scene"; el.id = "sc_" + id; el.innerHTML = html; root.appendChild(el); return el; };
+const tl = id => TL.scenes.find(s => s.id === id);
+const pad4 = n => String(n).padStart(4, "0");
+
+// --------- Escena con captura de la app dentro de una ventana ---------
+function footScene(id, cfg) {
+  const el = mk(id, `
+    <div class="kick">${cfg.kicker}</div>
+    <h2 class="ttl">${words(cfg.title)}</h2>
+    <div class="persp"><div class="win"><div class="bar3"><b></b><b></b><b></b><span>${cfg.url}</span></div><img class="shot" alt=""></div></div>
+    ${cfg.chips.map(c => `<div class="chip ${c.warn ? "warn" : ""}" style="left:${c.x}px;top:${c.y}px"><span class="ic">${c.ic}</span>${c.t}</div>`).join("")}
+    ${cfg.extra || ""}`);
+  const kick = $(".kick", el), ws = [...el.querySelectorAll(".ttl i")], win = $(".win", el), img = $(".shot", el), chips = [...el.querySelectorAll(".chip")];
+  let last = -1;
+  S[id] = { el, async anim(lt, D) {
+    kick.style.opacity = seg(lt, .15, .55); kick.style.transform = `translateX(${(1 - seg(lt, .15, .6)) * -40}px)`;
+    ws.forEach((w, k) => reveal(w, seg(lt, .2 + k * .09, .75 + k * .09)));
+    const p = seg(lt, .2, 1.1, E.out);
+    const drift = 1 + .035 * (lt / D);
+    win.style.opacity = clamp(p * 1.8);
+    win.style.transform = `translateY(${(1 - p) * 150}px) rotateX(${(1 - p) * 24}deg) scale(${(.88 + .12 * p) * drift})`;
+    const idx = Math.min(tl(id).n - 1, Math.max(0, Math.floor(lt * 30)));
+    if (idx !== last) { last = idx; img.src = `frames/${id}/${pad4(idx + 1)}.jpg`; try { await img.decode(); } catch (e) {} }
+    chips.forEach((c, k) => {
+      const q = seg(lt, cfg.chips[k].at, cfg.chips[k].at + .55, E.back);
+      c.style.opacity = clamp(q * 2.2);
+      c.style.transform = `translateY(${(1 - q) * 40 + Math.sin(lt * 2.2 + k * 1.7) * 7}px) scale(${.7 + .3 * q})`;
+    });
+    if (cfg.extraAnim) cfg.extraAnim(el, lt, D);
+  } };
+}
+
+footScene("m2", { kicker: "Tu inicio", title: "Tu siguiente paso", url: "clinica-ocana.app/inicio",
+  chips: [{ ic: "✓", t: "Tu ejercicio de hoy", x: 1250, y: 330, at: 1.5 }, { ic: "▲", t: "Tu meta y tu avance", x: 60, y: 760, at: 2.7 }] });
+footScene("m3", { kicker: "Guía del ejercicio", title: "Mira cómo se hace", url: "clinica-ocana.app/ejercicio",
+  chips: [{ ic: "1", t: "Demostración animada", x: 1250, y: 330, at: 1.3 }, { ic: "2", t: "Pasos y precauciones", x: 60, y: 760, at: 2.5 }] });
+footScene("m4", { kicker: "Cámara + inteligencia artificial", title: "Mide tu movimiento en vivo", url: "clinica-ocana.app/ejercicio/camara",
+  chips: [{ ic: "◉", t: "Solo tu esqueleto, nunca tu imagen", x: 1180, y: 330, at: 5.0 },
+          { ic: "!", t: "Sin medida segura, no inventa números", x: 60, y: 760, at: 8.5, warn: true },
+          { ic: "✓", t: "Te da un consejo para colocarte", x: 1180, y: 840, at: 10.9 }] });
+footScene("m5", { kicker: "Tu progreso", title: "Evolución sesión a sesión", url: "clinica-ocana.app/progreso",
+  chips: [{ ic: "°", t: "Grados de movimiento", x: 60, y: 420, at: 1.3 }, { ic: "7", t: "Tu semana", x: 1250, y: 330, at: 2.2 }],
+  extra: `<div class="chart"><svg width="460" height="250" viewBox="0 0 460 250"><polyline class="ln" points="30,200 100,170 170,178 240,120 310,100 380,56 430,34" fill="none" stroke="#2dd4bf" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><circle class="hd" r="13" fill="#fff" stroke="#2dd4bf" stroke-width="6"/><text x="30" y="40" fill="#a9c3d6" font-size="24" font-weight="700" font-family="Segoe UI">Tus logros</text></svg></div>`,
+  extraAnim(el, lt) {
+    const c = $(".chart", el), q = seg(lt, 2.7, 3.3, E.back);
+    c.style.opacity = clamp(q * 2); c.style.transform = `translateY(${(1 - q) * 50}px) scale(${.8 + .2 * q})`;
+    const ln = $(".ln", el), L = ln.getTotalLength(), d = seg(lt, 2.9, 3.9, E.io);
+    ln.style.strokeDasharray = L; ln.style.strokeDashoffset = L * (1 - d);
+    const pt = ln.getPointAtLength(L * d), hd = $(".hd", el); hd.setAttribute("cx", pt.x); hd.setAttribute("cy", pt.y);
+  } });
+footScene("m6", { kicker: "Para el fisioterapeuta", title: "Un solo panel", url: "clinica-ocana.app/fisio",
+  chips: [{ ic: "☰", t: "Pendientes de hoy", x: 1250, y: 330, at: 1.4 }, { ic: "!", t: "Alertas claras", x: 60, y: 450, at: 2.9, warn: true }, { ic: "✓", t: "Ficha de cada paciente", x: 1220, y: 820, at: 4.1 }] });
+
+// --------- m0: gancho con el esqueleto animado ---------
+{
+  const txt = "¿Y si tu fisioterapeuta pudiera acompañarte, incluso desde casa?";
+  const ws = txt.split(" ");
+  const html = ws.map((w, k) => `<span class="w"><i class="${/^casa/.test(w) ? "acc" : ""}">${w}</i></span>`).join(" ");
+  const el = mk("m0", `<h1 class="hook">${html}</h1>
+   <svg id="fig" width="760" height="900" viewBox="0 0 760 900" style="position:absolute;left:1030px;top:90px;overflow:visible">
+     <g id="rings"></g>
+     <g stroke="#2dd4bf" stroke-width="12" stroke-linecap="round" fill="none" opacity=".95">
+       <line x1="380" y1="262" x2="380" y2="520"/><line x1="300" y1="262" x2="460" y2="262"/>
+       <line x1="380" y1="520" x2="340" y2="700"/><line x1="340" y1="700" x2="330" y2="860"/>
+       <line x1="380" y1="520" x2="420" y2="700"/><line x1="420" y1="700" x2="432" y2="860"/>
+       <line x1="300" y1="262" x2="268" y2="430"/><line x1="268" y1="430" x2="262" y2="560"/>
+       <line x1="460" y1="262" x2="490" y2="420"/><line id="fa" x1="490" y1="420" x2="490" y2="580"/>
+     </g>
+     <circle cx="380" cy="175" r="54" fill="none" stroke="#2dd4bf" stroke-width="12"/>
+     <path id="arc" d="" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="7" stroke-linecap="round"/>
+     <g fill="#fff"><circle cx="460" cy="262" r="14"/><circle cx="300" cy="262" r="14"/><circle cx="380" cy="520" r="14"/><circle cx="340" cy="700" r="14"/><circle cx="420" cy="700" r="14"/><circle cx="268" cy="430" r="12"/><circle cx="490" cy="420" r="16" fill="#fbbf24"/><circle id="wr" r="14"/></g>
+     <text id="deg" x="0" y="0" text-anchor="middle" fill="#fbbf24" font-size="58" font-weight="800" font-family="Segoe UI"></text>
+   </svg>`);
+  const wsEl = [...el.querySelectorAll(".hook i")];
+  const cum = []; let c = 0; ws.forEach(w => { cum.push(c); c += w.length + 1; });
+  const fig = $("#fig", el), fa = $("#fa", el), wr = $("#wr", el), arc = $("#arc", el), deg = $("#deg", el), rings = $("#rings", el);
+  rings.innerHTML = [0, 1, 2].map(() => `<circle cx="490" cy="420" r="30" fill="none" stroke="#fbbf24" stroke-width="4"/>`).join("");
+  const ringEls = [...rings.children];
+  const Ex = 490, Ey = 420, Sx = 460, Sy = 262, LEN = 165;
+  S.m0 = { el, anim(lt, D) {
+    wsEl.forEach((w, k) => { const at = .5 + (cum[k] / c) * 3.4; reveal(w, seg(lt, at, at + .5)); });
+    const q = seg(lt, .25, 1.3, E.back);
+    fig.style.opacity = clamp(q * 2); fig.style.transform = `translateY(${(1 - q) * 80}px) scale(${.85 + .15 * q})`;
+    // flexión de codo: 172° (estirado) -> 42° (flexionado)
+    const th = 107 + 65 * Math.cos(2 * Math.PI * Math.max(0, lt - .6) / 3.2);
+    const a0 = Math.atan2(Sy - Ey, Sx - Ex);           // hacia el hombro
+    const a1 = a0 + th * Math.PI / 180;                 // antebrazo hacia delante y arriba
+    const wx = Ex + LEN * Math.cos(a1), wy = Ey + LEN * Math.sin(a1);
+    fa.setAttribute("x2", wx); fa.setAttribute("y2", wy); wr.setAttribute("cx", wx); wr.setAttribute("cy", wy);
+    const R = 82, p0 = [Ex + R * Math.cos(a0), Ey + R * Math.sin(a0)], p1 = [Ex + R * Math.cos(a1), Ey + R * Math.sin(a1)];
+    arc.setAttribute("d", `M ${Ex} ${Ey} L ${p0[0]} ${p0[1]} A ${R} ${R} 0 0 1 ${p1[0]} ${p1[1]} Z`);
+    const am = a0 + th * Math.PI / 360;
+    deg.setAttribute("x", Ex + 150 * Math.cos(am) + 40); deg.setAttribute("y", Ey + 150 * Math.sin(am) + 18);
+    deg.textContent = Math.round(th) + "°";
+    ringEls.forEach((r, k) => { const ph = ((lt * .8 + k / 3) % 1); r.setAttribute("r", 22 + ph * 110); r.setAttribute("opacity", (1 - ph) * .7 * q); });
+  } };
+}
+
+// --------- partículas ---------
+function particles(el, n = 26) {
+  let h = ""; for (let k = 0; k < n; k++) h += `<div class="dot" style="opacity:0"></div>`;
+  const wrap = document.createElement("div"); wrap.innerHTML = h; el.prepend(wrap);
+  const ds = [...wrap.children], seed = k => { const x = Math.sin(k * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  return lt => ds.forEach((d, k) => {
+    const x = seed(k) * 1920, sp = 30 + seed(k + 50) * 70, y = ((seed(k + 99) * 1300 - lt * sp) % 1300 + 1300) % 1300 - 110;
+    const s = 4 + seed(k + 7) * 12; d.style.width = d.style.height = s + "px";
+    d.style.opacity = .12 + seed(k + 3) * .35; d.style.transform = `translate(${x + Math.sin(lt + k) * 20}px,${y}px)`;
+  });
+}
+
+// --------- m1: título de marca ---------
+{
+  const el = mk("m1", `<div class="mark">${MARK}</div><div class="name">${"Clínica Ocaña".split("").map(ch => `<span>${ch === " " ? "&nbsp;" : ch}</span>`).join("")}</div>
+    <div class="sub">Rehabilitación en casa · con inteligencia artificial</div>
+    <svg width="1920" height="1080" style="position:absolute;left:0;top:0"><g id="r1" fill="none" stroke="#2dd4bf" stroke-width="4"><circle cx="960" cy="300" r="150"/><circle cx="960" cy="300" r="150"/><circle cx="960" cy="300" r="150"/></g></svg>`);
+  const mark = $(".mark", el), cross = $(".cross", el), ls = [...el.querySelectorAll(".name span")], sub = $(".sub", el), rs = [...$("#r1", el).children];
+  const ps = particles(el);
+  S.m1 = { el, anim(lt, D) {
+    ps(lt);
+    const q = seg(lt, .2, 1.1, E.back);
+    mark.style.transform = `scale(${q}) rotate(${(1 - q) * -90}deg)`; mark.style.opacity = clamp(q * 2);
+    cross.style.transformOrigin = "50px 50px"; cross.style.transform = `rotate(${seg(lt, .5, 1.6, E.io) * 90}deg)`;
+    ls.forEach((s, k) => { const p = seg(lt, 1.0 + k * .04, 1.5 + k * .04, E.out); s.style.opacity = p; s.style.transform = `translateY(${(1 - p) * 70}px)`; });
+    const p2 = seg(lt, 2.2, 2.9); sub.style.opacity = p2; sub.style.transform = `translateY(${(1 - p2) * 30}px)`;
+    rs.forEach((r, k) => { const ph = ((lt - .3 - k * .4) / 2.2); const v = clamp(ph); r.setAttribute("r", 150 + v * 700); r.setAttribute("opacity", (1 - v) * .6 * (ph > 0 ? 1 : 0)); });
+  } };
+}
+
+// --------- m7: celular ---------
+{
+  const el = mk("m7", `
+    <div class="kick" style="top:300px">En todos tus dispositivos</div>
+    <h2 class="ttl" style="top:350px;font-size:122px;white-space:normal;width:1000px">${words("También en tu celular")}</h2>
+    <div class="chip" style="left:112px;top:760px"><span class="ic">✓</span>Misma cuenta, mismo plan</div>
+    <div class="phone"><div class="notch"></div><img alt=""></div>`);
+  const kick = $(".kick", el), ws = [...el.querySelectorAll(".ttl i")], chip = $(".chip", el), ph = $(".phone", el), img = $("img", el);
+  const ps = particles(el, 16);
+  let last = -1;
+  S.m7 = { el, async anim(lt, D) {
+    ps(lt);
+    kick.style.opacity = seg(lt, .2, .6);
+    ws.forEach((w, k) => reveal(w, seg(lt, .3 + k * .12, .9 + k * .12)));
+    const q = seg(lt, .2, 1.2, E.out);
+    ph.style.opacity = clamp(q * 2);
+    ph.style.transform = `perspective(1800px) translateY(${(1 - q) * 160 + Math.sin(lt * 1.6) * 8}px) rotateY(${(1 - q) * -35 - 6}deg) rotateZ(${(1 - q) * 6}deg)`;
+    const c = seg(lt, 1.6, 2.2, E.back); chip.style.opacity = clamp(c * 2); chip.style.transform = `translateX(${(1 - c) * -80}px)`;
+    const idx = Math.min(tl("m7").n - 1, Math.floor(lt * 30));
+    if (idx !== last) { last = idx; img.src = `frames/m7/${pad4(idx + 1)}.jpg`; try { await img.decode(); } catch (e) {} }
+  } };
+}
+
+// --------- m8: resumen en tarjetas ---------
+{
+  const cards = [["01", "5 ejercicios", "con la cámara del celular"], ["02", "Tu esqueleto", "no tu imagen"], ["03", "Seguimiento", "semanal de tu avance"], ["04", "Panel del fisio", "pendientes y alertas"], ["05", "Asistente", "que sugiere ajustes"]];
+  const el = mk("m8", `<div class="kick" style="top:110px">Todo en un solo lugar</div><h2 class="ttl" style="top:150px">${words("Rehabilitación guiada")}</h2>
+    ${cards.map((c, k) => `<div class="card" style="left:${92 + k * 346}px"><div class="num">${c[0]}</div><h3>${c[1]}</h3><p>${c[2]}</p></div>`).join("")}`);
+  const kick = $(".kick", el), ws = [...el.querySelectorAll(".ttl i")], cs = [...el.querySelectorAll(".card")];
+  const ps = particles(el, 18);
+  S.m8 = { el, anim(lt, D) {
+    ps(lt);
+    kick.style.opacity = seg(lt, .1, .5);
+    ws.forEach((w, k) => reveal(w, seg(lt, .15 + k * .1, .7 + k * .1)));
+    cs.forEach((c, k) => { const q = seg(lt, .6 + k * .85, 1.2 + k * .85, E.back); c.style.opacity = clamp(q * 2); c.style.transform = `translateY(${(1 - q) * 120 + Math.sin(lt * 1.8 + k) * 6}px) scale(${.8 + .2 * q})`; });
+  } };
+}
+
+// --------- m9: cierre ---------
+{
+  const el = mk("m9", `<div class="mark" style="top:130px;width:260px;height:260px;left:830px">${MARK}</div>
+    <div class="name" style="top:430px;font-size:160px">${"Clínica Ocaña".split("").map(ch => `<span>${ch === " " ? "&nbsp;" : ch}</span>`).join("")}</div>
+    <div class="sub" style="top:650px">Rehabilitación en casa, con acompañamiento</div>
+    <div class="pill"><div>Pregúntale a tu fisioterapeuta por la app</div></div>
+    <div class="foot">Proyecto de grado · Ingeniería de Sistemas · No es un dispositivo médico</div>`);
+  const mark = $(".mark", el), cross = $(".cross", el), ls = [...el.querySelectorAll(".name span")], sub = $(".sub", el), pill = $(".pill div", el), foot = $(".foot", el);
+  const ps = particles(el, 30);
+  S.m9 = { el, anim(lt, D) {
+    ps(lt);
+    const q = seg(lt, .2, 1.0, E.back);
+    mark.style.transform = `scale(${q}) rotate(${(1 - q) * -90}deg)`; mark.style.opacity = clamp(q * 2);
+    cross.style.transformOrigin = "50px 50px"; cross.style.transform = `rotate(${seg(lt, .4, 1.4, E.io) * 90}deg)`;
+    ls.forEach((s, k) => { const p = seg(lt, .7 + k * .035, 1.2 + k * .035, E.out); s.style.opacity = p; s.style.transform = `translateY(${(1 - p) * 60}px)`; });
+    const p2 = seg(lt, 1.8, 2.4); sub.style.opacity = p2; sub.style.transform = `translateY(${(1 - p2) * 26}px)`;
+    const p3 = seg(lt, 3.0, 3.7, E.back); pill.style.opacity = clamp(p3 * 2); pill.style.transform = `scale(${.7 + .3 * p3})`;
+    foot.style.opacity = seg(lt, 3.6, 4.3) * .9;
+    const fade = seg(lt, D - .6, D, E.lin); el.style.opacity = 1 - fade * .85;
+  } };
+}
+
+// --------- fondo, transiciones y marca ---------
+const b1 = $("#b1"), b2 = $("#b2"), b3 = $("#b3"), grid = $("#grid"), brand = $("#brand"), wp1 = $("#wp1"), wp2 = $("#wp2");
+const bounds = TL.scenes.slice(1).map(s => s.start);
+function bg(t) {
+  b1.style.transform = `translate(${-250 + Math.sin(t * .35) * 260 + 400}px,${-300 + Math.cos(t * .28) * 160}px)`;
+  b2.style.transform = `translate(${900 + Math.cos(t * .3) * 240}px,${300 + Math.sin(t * .33) * 200}px)`;
+  b3.style.transform = `translate(${300 + Math.sin(t * .2 + 2) * 300}px,${600 + Math.cos(t * .25) * 120}px)`;
+  grid.style.backgroundPosition = `${(t * 14) % 90}px ${(t * 9) % 90}px`;
+}
+function wipes(t) {
+  let a = -4000, b = -4000;
+  for (const bd of bounds) {
+    const p = (t - (bd - .4)) / .8, p2 = (t - (bd - .3)) / .8;
+    if (p > 0 && p < 1) a = -2800 + E.io(p) * 5400;
+    if (p2 > 0 && p2 < 1) b = -2800 + E.io(p2) * 5400;
+  }
+  wp1.style.transform = `translateX(${a}px) skewX(-14deg)`;
+  wp2.style.transform = `translateX(${b}px) skewX(-14deg)`;
+}
+window.render = async function (t) {
+  t = Math.min(t, TL.total - 1e-3);
+  let cur = 0; TL.scenes.forEach((s, i) => { if (t >= s.start - 1e-6) cur = i; });
+  TL.scenes.forEach((s, i) => { S[s.id].el.style.display = i === cur ? "block" : "none"; });
+  bg(t);
+  const s = TL.scenes[cur];
+  await S[s.id].anim(t - s.start, s.dur);
+  wipes(t);
+  brand.style.opacity = ["m2", "m3", "m4", "m5", "m6"].includes(s.id) ? .95 * seg(t - s.start, .3, .8) : 0;
+  return true;
+};
+window.ready = true;
+</script></body></html>
